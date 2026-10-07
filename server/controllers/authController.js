@@ -1,946 +1,699 @@
-const bcrypt =
-    require("bcryptjs");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
-const jwt =
-    require("jsonwebtoken");
+const User = require("../models/User");
 
-const User =
-    require("../models/User");
-
-const generateOTP =
-    require("../utils/generateOTP");
+const generateOTP = require("../utils/generateOTP");
 
 const {
-    sendOTPEmail,
-    sendPasswordResetEmail
-} =
-    require("../services/emailService");
-
-
-const createToken =
-    (id) =>
-
-        jwt.sign(
-            {
-                id
-            },
-
-            process.env.JWT_SECRET,
-
-            {
-                expiresIn:
-                    process.env.JWT_EXPIRES_IN ||
-                    "7d"
-            }
-        );
-
-
-const publicUser =
-    (user) => ({
-
-        id:
-            user._id,
-
-        fullName:
-            user.fullName,
-
-        collegePid:
-            user.collegePid,
-
-        email:
-            user.email,
-
-        mobileNumber:
-            user.mobileNumber,
-
-        collegeName:
-            user.collegeName,
-
-        yearSemester:
-            user.yearSemester,
-
-        role:
-            user.role,
-
-        isEmailVerified:
-            user.isEmailVerified,
-
-        createdAt:
-            user.createdAt
-
-    });
-
-
-/*
-|--------------------------------------------------------------------------
-| SIGNUP
-|--------------------------------------------------------------------------
-*/
-
-exports.signup =
-    async (
-        req,
-        res,
-        next
-    ) => {
-
-        try {
-
-            const {
-
-                fullName,
-
-                collegePid,
-
-                collegeName,
-
-                yearSemester,
-
-                mobileNumber,
-
-                email,
-
-                password,
-
-                confirmPassword
-
-            } =
-                req.body;
-
-
-            if (
-                !fullName ||
-                !collegePid ||
-                !collegeName ||
-                !yearSemester ||
-                !mobileNumber ||
-                !email ||
-                !password
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "All signup fields are required."
-
-                    });
-
-            }
-
-
-            if (
-                password !==
-                confirmPassword
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "Passwords do not match."
-
-                    });
-
-            }
-
-
-            if (
-                password.length <
-                6
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "Password must be at least 6 characters."
-
-                    });
-
-            }
-
-
-            // ========================================
-            // NORMALIZE USER DATA
-            // ========================================
-
-            const normalizedEmail =
-                String(email)
-                    .toLowerCase()
-                    .trim();
-
-
-            const normalizedPid =
-                String(collegePid)
-                    .trim()
-                    .toUpperCase();
-
-
-            /*
-             * Normalize mobile number.
-             *
-             * This removes spaces, -, +, etc.
-             *
-             * Example:
-             *
-             * 98765 43210
-             * 98765-43210
-             *
-             * Both become:
-             * 9876543210
-             */
-
-            let normalizedMobile =
-                String(mobileNumber)
-                    .replace(/\D/g, "");
-
-
-            /*
-             * If Indian number is entered as:
-             *
-             * 919876543210
-             *
-             * convert it to:
-             *
-             * 9876543210
-             */
-
-            if (
-                normalizedMobile.length === 12 &&
-                normalizedMobile.startsWith("91")
-            ) {
-
-                normalizedMobile =
-                    normalizedMobile.slice(2);
-
-            }
-
-
-            // ========================================
-            // MOBILE NUMBER VALIDATION
-            // ========================================
-
-            if (
-                normalizedMobile.length !== 10
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "Please enter a valid 10-digit mobile number."
-
-                    });
-
-            }
-
-
-            /*
-             * Indian mobile numbers normally start
-             * from 6, 7, 8 or 9.
-             */
-
-            if (
-                !/^[6-9]\d{9}$/.test(
-                    normalizedMobile
-                )
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "Please enter a valid mobile number."
-
-                    });
-
-            }
-
-
-            /*
-             * Check email.
-             */
-
-            const existingEmail =
-                await User.findOne({
-
-                    email:
-                        normalizedEmail
-
-                });
-
-
-            if (
-                existingEmail
-            ) {
-
-                return res
-                    .status(409)
-                    .json({
-
-                        message:
-                            existingEmail.isEmailVerified
-
-                                ? "Email is already registered."
-
-                                : "Email exists but is not verified. Request a new OTP."
-
-                    });
-
-            }
-
-
-            /*
-             * Check College PID.
-             */
-
-            const existingPid =
-                await User.findOne({
-
-                    collegePid:
-                        normalizedPid
-
-                });
-
-
-            if (
-                existingPid
-            ) {
-
-                return res
-                    .status(409)
-                    .json({
-
-                        message:
-                            "This College PID is already registered."
-
-                    });
-
-            }
-
-
-            /*
-             * Check MOBILE NUMBER.
-             *
-             * A new user cannot use a mobile
-             * number that already exists.
-             */
-
-            const existingMobile =
-                await User.findOne({
-
-                    mobileNumber:
-                        normalizedMobile
-
-                });
-
-
-            if (
-                existingMobile
-            ) {
-
-                return res
-                    .status(409)
-                    .json({
-
-                        message:
-                            "This mobile number is already registered. Please use another mobile number."
-
-                    });
-
-            }
-
-
-            // ========================================
-            // HASH PASSWORD
-            // ========================================
-
-            const hashedPassword =
-                await bcrypt.hash(
-                    password,
-                    12
-                );
-
-
-            const otp =
-                generateOTP();
-
-
-            // ========================================
-            // CREATE USER
-            // ========================================
-
-            const user =
-                await User.create({
-
-                    fullName:
-                        String(fullName).trim(),
-
-                    collegePid:
-                        normalizedPid,
-
-                    collegeName:
-                        String(collegeName).trim(),
-
-                    yearSemester:
-                        String(yearSemester).trim(),
-
-                    mobileNumber:
-                        normalizedMobile,
-
-                    email:
-                        normalizedEmail,
-
-                    password:
-                        hashedPassword,
-
-                    otp,
-
-                    otpExpiresAt:
-                        new Date(
-                            Date.now() +
-                            10 *
-                            60 *
-                            1000
-                        )
-
-                });
-
-
-            // ========================================
-            // SEND OTP EMAIL
-            // ========================================
-
-            try {
-
-                await sendOTPEmail(
-                    user.email,
-                    user.fullName,
-                    otp
-                );
-
-            } catch (
-            mailError
-            ) {
-
-                await User.findByIdAndDelete(
-                    user._id
-                );
-
-
-                return res
-                    .status(500)
-                    .json({
-
-                        message:
-                            "Account could not be created because OTP email could not be sent. Check SMTP settings."
-
-                    });
-
-            }
-
-
-            res
-                .status(201)
-                .json({
-
-                    message:
-                        "Signup successful. OTP sent to your email.",
-
-                    email:
-                        user.email
-
-                });
-
-        } catch (
-        error
+    sendVerificationOTP,
+    sendPasswordResetOTP
+} = require("../services/emailService");
+
+
+// =====================================================
+// CREATE JWT
+// =====================================================
+
+const createToken = (user) => {
+    return jwt.sign(
+        {
+            id: user._id,
+            role: user.role
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: "7d"
+        }
+    );
+};
+
+
+// =====================================================
+// PUBLIC USER DATA
+// =====================================================
+
+const publicUser = (user) => {
+    return {
+        id: user._id,
+        fullName: user.fullName,
+        collegePid: user.collegePid,
+        email: user.email,
+        mobileNumber: user.mobileNumber,
+        collegeName: user.collegeName,
+        yearSemester: user.yearSemester,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt
+    };
+};
+
+
+// =====================================================
+// NORMALIZE MOBILE NUMBER
+// =====================================================
+
+const normalizeMobileNumber = (mobileNumber) => {
+
+    let mobile = String(mobileNumber || "")
+        .replace(/\D/g, "");
+
+    // If user enters Indian country code:
+    // 919876543210
+    // convert it to:
+    // 9876543210
+
+    if (
+        mobile.length === 12 &&
+        mobile.startsWith("91")
+    ) {
+        mobile = mobile.substring(2);
+    }
+
+    return mobile;
+};
+
+
+// =====================================================
+// SIGNUP
+// =====================================================
+
+exports.signup = async (req, res) => {
+
+    try {
+
+        const {
+            fullName,
+            collegePid,
+            collegeName,
+            yearSemester,
+            mobileNumber,
+            email,
+            password,
+            confirmPassword
+        } = req.body;
+
+
+        // -------------------------------------------------
+        // REQUIRED FIELDS
+        // -------------------------------------------------
+
+        if (
+            !fullName ||
+            !collegePid ||
+            !collegeName ||
+            !yearSemester ||
+            !mobileNumber ||
+            !email ||
+            !password ||
+            !confirmPassword
         ) {
 
-            /*
-             * Duplicate database protection.
-             */
-
-            if (
-                error.code ===
-                11000
-            ) {
-
-                if (
-                    error.keyPattern
-                        ?.collegePid
-                ) {
-
-                    return res
-                        .status(409)
-                        .json({
-
-                            message:
-                                "This College PID is already registered."
-
-                        });
-
-                }
-
-
-                if (
-                    error.keyPattern
-                        ?.email
-                ) {
-
-                    return res
-                        .status(409)
-                        .json({
-
-                            message:
-                                "Email is already registered."
-
-                        });
-
-                }
-
-
-                if (
-                    error.keyPattern
-                        ?.mobileNumber
-                ) {
-
-                    return res
-                        .status(409)
-                        .json({
-
-                            message:
-                                "This mobile number is already registered. Please use another mobile number."
-
-                        });
-
-                }
-
-            }
-
-
-            next(error);
-
-        }
-
-    };
-
-
-/*
-|--------------------------------------------------------------------------
-| VERIFY EMAIL
-|--------------------------------------------------------------------------
-*/
-
-exports.verifyEmail =
-    async (
-        req,
-        res,
-        next
-    ) => {
-
-        try {
-
-            const {
-                email,
-                otp
-            } =
-                req.body;
-
-
-            const user =
-                await User
-                    .findOne({
-
-                        email:
-                            email
-                                ?.toLowerCase()
-                                .trim()
-
-                    })
-                    .select(
-                        "+otp +otpExpiresAt"
-                    );
-
-
-            if (
-                !user
-            ) {
-
-                return res
-                    .status(404)
-                    .json({
-
-                        message:
-                            "User not found."
-
-                    });
-
-            }
-
-
-            if (
-                user.isEmailVerified
-            ) {
-
-                return res.json({
-
-                    message:
-                        "Email is already verified."
-
-                });
-
-            }
-
-
-            if (
-                !user.otp ||
-                !user.otpExpiresAt ||
-                user.otpExpiresAt <
-                new Date()
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "OTP is expired. Please resend OTP."
-
-                    });
-
-            }
-
-
-            if (
-                user.otp !==
-                otp
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "Invalid OTP."
-
-                    });
-
-            }
-
-
-            user.isEmailVerified =
-                true;
-
-            user.otp =
-                undefined;
-
-            user.otpExpiresAt =
-                undefined;
-
-
-            await user.save();
-
-
-            res.json({
-
-                message:
-                    "Email verified successfully. You can now login."
-
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required."
             });
 
-        } catch (
-        error
-        ) {
-
-            next(error);
-
         }
 
-    };
+
+        // -------------------------------------------------
+        // NORMALIZE DATA
+        // -------------------------------------------------
+
+        const normalizedEmail =
+            String(email)
+                .trim()
+                .toLowerCase();
 
 
-/*
-|--------------------------------------------------------------------------
-| RESEND OTP
-|--------------------------------------------------------------------------
-*/
-
-exports.resendOTP =
-    async (
-        req,
-        res,
-        next
-    ) => {
-
-        try {
-
-            const email =
-                req.body.email
-                    ?.toLowerCase()
-                    .trim();
+        const normalizedPid =
+            String(collegePid)
+                .trim()
+                .toUpperCase();
 
 
-            const user =
-                await User
-                    .findOne({
-                        email
-                    })
-                    .select(
-                        "+otp +otpExpiresAt"
-                    );
-
-
-            if (
-                !user
-            ) {
-
-                return res
-                    .status(404)
-                    .json({
-
-                        message:
-                            "User not found."
-
-                    });
-
-            }
-
-
-            if (
-                user.isEmailVerified
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "Email is already verified."
-
-                    });
-
-            }
-
-
-            const otp =
-                generateOTP();
-
-
-            user.otp =
-                otp;
-
-            user.otpExpiresAt =
-                new Date(
-                    Date.now() +
-                    10 *
-                    60 *
-                    1000
-                );
-
-
-            await user.save();
-
-
-            await sendOTPEmail(
-                user.email,
-                user.fullName,
-                otp
+        const normalizedMobile =
+            normalizeMobileNumber(
+                mobileNumber
             );
 
 
-            res.json({
+        // -------------------------------------------------
+        // VALIDATE MOBILE
+        // -------------------------------------------------
 
-                message:
-                    "New OTP sent."
-
-            });
-
-        } catch (
-        error
+        if (
+            !/^[6-9]\d{9}$/.test(
+                normalizedMobile
+            )
         ) {
 
-            next(error);
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Please enter a valid 10-digit Indian mobile number."
+            });
 
         }
 
-    };
+
+        // -------------------------------------------------
+        // VALIDATE EMAIL
+        // -------------------------------------------------
+
+        const emailRegex =
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 
-/*
-|--------------------------------------------------------------------------
-| LOGIN
-|--------------------------------------------------------------------------
-*/
+        if (
+            !emailRegex.test(
+                normalizedEmail
+            )
+        ) {
 
-exports.login =
-    async (
-        req,
-        res,
-        next
-    ) => {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Please enter a valid email address."
+            });
+
+        }
+
+
+        // -------------------------------------------------
+        // PASSWORD MATCH
+        // -------------------------------------------------
+
+        if (
+            password !==
+            confirmPassword
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Passwords do not match."
+            });
+
+        }
+
+
+        // -------------------------------------------------
+        // PASSWORD LENGTH
+        // -------------------------------------------------
+
+        if (
+            password.length < 6
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Password must be at least 6 characters long."
+            });
+
+        }
+
+
+        // -------------------------------------------------
+        // CHECK EMAIL
+        // -------------------------------------------------
+
+        const existingEmail =
+            await User.findOne({
+                email: normalizedEmail
+            });
+
+        if (existingEmail) {
+
+            return res.status(409).json({
+                success: false,
+                field: "email",
+                message:
+                    "This email address is already registered."
+            });
+
+        }
+
+
+        // -------------------------------------------------
+        // CHECK COLLEGE PID
+        // -------------------------------------------------
+
+        const existingPid =
+            await User.findOne({
+                collegePid: normalizedPid
+            });
+
+        if (existingPid) {
+
+            return res.status(409).json({
+                success: false,
+                field: "collegePid",
+                message:
+                    "This College PID is already registered."
+            });
+
+        }
+
+
+        // -------------------------------------------------
+        // CHECK MOBILE NUMBER
+        // -------------------------------------------------
+
+        const existingMobile =
+            await User.findOne({
+                mobileNumber:
+                    normalizedMobile
+            });
+
+        if (existingMobile) {
+
+            return res.status(409).json({
+                success: false,
+                field: "mobileNumber",
+                message:
+                    "This mobile number is already registered."
+            });
+
+        }
+
+
+        // -------------------------------------------------
+        // HASH PASSWORD
+        // -------------------------------------------------
+
+        const hashedPassword =
+            await bcrypt.hash(
+                password,
+                12
+            );
+
+
+        // -------------------------------------------------
+        // GENERATE OTP
+        // -------------------------------------------------
+
+        const otp =
+            generateOTP();
+
+
+        const otpExpiresAt =
+            new Date(
+                Date.now() +
+                10 * 60 * 1000
+            );
+
+
+        // -------------------------------------------------
+        // CREATE USER
+        // -------------------------------------------------
+
+        const user =
+            await User.create({
+
+                fullName:
+                    String(fullName).trim(),
+
+                collegePid:
+                    normalizedPid,
+
+                collegeName:
+                    String(collegeName).trim(),
+
+                yearSemester:
+                    String(yearSemester).trim(),
+
+                mobileNumber:
+                    normalizedMobile,
+
+                email:
+                    normalizedEmail,
+
+                password:
+                    hashedPassword,
+
+                role:
+                    "student",
+
+                isEmailVerified:
+                    false,
+
+                otp,
+
+                otpExpiresAt
+
+            });
+
+
+        // -------------------------------------------------
+        // SEND VERIFICATION OTP
+        // -------------------------------------------------
 
         try {
 
-            const {
-                email,
-                password
-            } =
-                req.body;
+            await sendVerificationOTP(
+                normalizedEmail,
+                otp
+            );
 
+        } catch (emailError) {
 
-            const user =
-                await User
-                    .findOne({
+            console.error(
+                "Verification email error:",
+                emailError
+            );
 
-                        email:
-                            email
-                                ?.toLowerCase()
-                                .trim()
+            // Remove user if email could not be sent
+            await User.findByIdAndDelete(
+                user._id
+            );
 
-                    })
-                    .select(
-                        "+password"
-                    );
-
-
-            if (
-                !user ||
-                !(
-                    await bcrypt.compare(
-                        password || "",
-                        user.password
-                    )
-                )
-            ) {
-
-                return res
-                    .status(401)
-                    .json({
-
-                        message:
-                            "Invalid email or password."
-
-                    });
-
-            }
-
-
-            if (
-                user.role ===
-                "student" &&
-                !user.isEmailVerified
-            ) {
-
-                return res
-                    .status(403)
-                    .json({
-
-                        message:
-                            "Please verify your email before login."
-
-                    });
-
-            }
-
-
-            res.json({
-
-                token:
-                    createToken(
-                        user._id
-                    ),
-
-                user:
-                    publicUser(
-                        user
-                    )
-
+            return res.status(500).json({
+                success: false,
+                message:
+                    "Unable to send verification email. Please try again."
             });
-
-        } catch (
-        error
-        ) {
-
-            next(error);
 
         }
 
-    };
+
+        return res.status(201).json({
+
+            success: true,
+
+            message:
+                "Account created successfully. Please verify your email using the OTP sent to your email address.",
+
+            user: publicUser(user)
+
+        });
 
 
-/*
-|--------------------------------------------------------------------------
-| ME
-|--------------------------------------------------------------------------
-*/
+    } catch (error) {
 
-exports.me =
+        console.error(
+            "SIGNUP ERROR:",
+            error
+        );
+
+
+        // -------------------------------------------------
+        // MONGODB DUPLICATE KEY ERROR
+        // -------------------------------------------------
+
+        if (
+            error.code === 11000
+        ) {
+
+            const duplicateField =
+                Object.keys(
+                    error.keyPattern || {}
+                )[0];
+
+
+            if (
+                duplicateField ===
+                "email"
+            ) {
+
+                return res.status(409).json({
+                    success: false,
+                    field: "email",
+                    message:
+                        "This email address is already registered."
+                });
+
+            }
+
+
+            if (
+                duplicateField ===
+                "collegePid"
+            ) {
+
+                return res.status(409).json({
+                    success: false,
+                    field: "collegePid",
+                    message:
+                        "This College PID is already registered."
+                });
+
+            }
+
+
+            if (
+                duplicateField ===
+                "mobileNumber"
+            ) {
+
+                return res.status(409).json({
+                    success: false,
+                    field: "mobileNumber",
+                    message:
+                        "This mobile number is already registered."
+                });
+
+            }
+
+
+            return res.status(409).json({
+                success: false,
+                message:
+                    "A user with the same information already exists."
+            });
+
+        }
+
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Unable to create account. Please try again."
+        });
+
+    }
+
+};
+
+
+// =====================================================
+// VERIFY EMAIL
+// =====================================================
+
+exports.verifyEmail = async (
+    req,
+    res
+) => {
+
+    try {
+
+        const {
+            email,
+            otp
+        } = req.body;
+
+
+        if (
+            !email ||
+            !otp
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Email and OTP are required."
+            });
+
+        }
+
+
+        const normalizedEmail =
+            String(email)
+                .trim()
+                .toLowerCase();
+
+
+        const user =
+            await User.findOne({
+                email:
+                    normalizedEmail
+            })
+                .select(
+                    "+otp +otpExpiresAt"
+                );
+
+
+        if (!user) {
+
+            return res.status(404).json({
+                success: false,
+                message:
+                    "User not found."
+            });
+
+        }
+
+
+        if (
+            user.isEmailVerified
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Email is already verified."
+            });
+
+        }
+
+
+        if (
+            !user.otp ||
+            !user.otpExpiresAt
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "OTP not found. Please request a new OTP."
+            });
+
+        }
+
+
+        if (
+            user.otpExpiresAt <
+            new Date()
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "OTP has expired. Please request a new OTP."
+            });
+
+        }
+
+
+        if (
+            String(user.otp) !==
+            String(otp).trim()
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Invalid OTP."
+            });
+
+        }
+
+
+        user.isEmailVerified =
+            true;
+
+        user.otp = undefined;
+
+        user.otpExpiresAt =
+            undefined;
+
+        await user.save();
+
+
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                "Email verified successfully. You can now login.",
+
+            user:
+                publicUser(user)
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "VERIFY EMAIL ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Email verification failed."
+        });
+
+    }
+
+};
+
+
+// =====================================================
+// RESEND VERIFICATION OTP
+// =====================================================
+
+exports.resendVerificationOTP =
     async (
         req,
         res
     ) => {
 
-        res.json({
-
-            user:
-                publicUser(
-                    req.user
-                )
-
-        });
-
-    };
-
-
-/*
-|--------------------------------------------------------------------------
-| FORGOT PASSWORD
-|--------------------------------------------------------------------------
-*/
-
-exports.forgotPassword =
-    async (
-        req,
-        res,
-        next
-    ) => {
-
         try {
 
-            const email =
-                req.body.email
-                    ?.toLowerCase()
-                    .trim();
+            const {
+                email
+            } = req.body;
+
+
+            if (!email) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Email is required."
+                });
+
+            }
+
+
+            const normalizedEmail =
+                String(email)
+                    .trim()
+                    .toLowerCase();
 
 
             const user =
-                await User
-                    .findOne({
-                        email
-                    })
-                    .select(
-                        "+otp +otpExpiresAt"
-                    );
+                await User.findOne({
+                    email:
+                        normalizedEmail
+                });
+
+
+            if (!user) {
+
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        "User not found."
+                });
+
+            }
 
 
             if (
-                !user
+                user.isEmailVerified
             ) {
 
-                return res
-                    .status(404)
-                    .json({
-
-                        message:
-                            "User not found."
-
-                    });
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Email is already verified."
+                });
 
             }
 
@@ -955,51 +708,249 @@ exports.forgotPassword =
             user.otpExpiresAt =
                 new Date(
                     Date.now() +
-                    10 *
-                    60 *
-                    1000
+                    10 * 60 * 1000
                 );
 
 
             await user.save();
 
 
-            await sendPasswordResetEmail(
-                user.email,
-                user.fullName,
+            await sendVerificationOTP(
+                normalizedEmail,
                 otp
             );
 
 
-            res.json({
-
+            return res.status(200).json({
+                success: true,
                 message:
-                    "Password reset OTP sent."
-
+                    "A new verification OTP has been sent."
             });
 
-        } catch (
-        error
-        ) {
 
-            next(error);
+        } catch (error) {
+
+            console.error(
+                "RESEND OTP ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    "Unable to resend OTP."
+            });
 
         }
 
     };
 
 
-/*
-|--------------------------------------------------------------------------
-| RESET PASSWORD
-|--------------------------------------------------------------------------
-*/
+// =====================================================
+// LOGIN
+// =====================================================
+
+exports.login = async (
+    req,
+    res
+) => {
+
+    try {
+
+        const {
+            email,
+            password
+        } = req.body;
+
+
+        if (
+            !email ||
+            !password
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Email and password are required."
+            });
+
+        }
+
+
+        const normalizedEmail =
+            String(email)
+                .trim()
+                .toLowerCase();
+
+
+        const user =
+            await User.findOne({
+                email:
+                    normalizedEmail
+            })
+                .select(
+                    "+password"
+                );
+
+
+        if (!user) {
+
+            return res.status(401).json({
+                success: false,
+                message:
+                    "Invalid email or password."
+            });
+
+        }
+
+
+        const passwordMatch =
+            await bcrypt.compare(
+                password,
+                user.password
+            );
+
+
+        if (!passwordMatch) {
+
+            return res.status(401).json({
+                success: false,
+                message:
+                    "Invalid email or password."
+            });
+
+        }
+
+
+        if (
+            !user.isEmailVerified
+        ) {
+
+            return res.status(403).json({
+                success: false,
+                message:
+                    "Please verify your email before logging in.",
+                email:
+                    user.email
+            });
+
+        }
+
+
+        const token =
+            createToken(user);
+
+
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                "Login successful.",
+
+            token,
+
+            user:
+                publicUser(user)
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "LOGIN ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Login failed. Please try again."
+        });
+
+    }
+
+};
+
+
+// =====================================================
+// FORGOT PASSWORD
+// =====================================================
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required."
+            });
+        }
+
+        const normalizedEmail = String(email)
+            .trim()
+            .toLowerCase();
+
+        const user = await User.findOne({
+            email: normalizedEmail
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "No account found with this email."
+            });
+        }
+
+        const otp = generateOTP();
+
+        user.otp = otp;
+
+        user.otpExpiresAt = new Date(
+            Date.now() + 10 * 60 * 1000
+        );
+
+        await user.save();
+
+        // OTP is sent by email only
+        await sendPasswordResetOTP(
+            normalizedEmail,
+            otp
+        );
+
+        // IMPORTANT:
+        // Do NOT return otp here.
+        return res.status(200).json({
+            success: true,
+            message:
+                "Password reset OTP has been sent to your email."
+        });
+
+    } catch (error) {
+        console.error(
+            "FORGOT PASSWORD ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Unable to process password reset request."
+        });
+    }
+};
+
+
+// =====================================================
+// RESET PASSWORD
+// =====================================================
 
 exports.resetPassword =
     async (
         req,
-        res,
-        next
+        res
     ) => {
 
         try {
@@ -1007,76 +958,119 @@ exports.resetPassword =
             const {
                 email,
                 otp,
-                newPassword
-            } =
-                req.body;
+                newPassword,
+                confirmPassword
+            } = req.body;
 
 
             if (
+                !email ||
+                !otp ||
                 !newPassword ||
-                newPassword.length <
-                6
+                !confirmPassword
             ) {
 
-                return res
-                    .status(400)
-                    .json({
-
-                        message:
-                            "New password must be at least 6 characters."
-
-                    });
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "All fields are required."
+                });
 
             }
 
 
+            if (
+                newPassword !==
+                confirmPassword
+            ) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Passwords do not match."
+                });
+
+            }
+
+
+            if (
+                newPassword.length < 6
+            ) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Password must be at least 6 characters long."
+                });
+
+            }
+
+
+            const normalizedEmail =
+                String(email)
+                    .trim()
+                    .toLowerCase();
+
+
             const user =
-                await User
-                    .findOne({
-
-                        email:
-                            email
-                                ?.toLowerCase()
-                                .trim()
-
-                    })
+                await User.findOne({
+                    email:
+                        normalizedEmail
+                })
                     .select(
                         "+password +otp +otpExpiresAt"
                     );
 
 
-            if (
-                !user
-            ) {
+            if (!user) {
 
-                return res
-                    .status(404)
-                    .json({
-
-                        message:
-                            "User not found."
-
-                    });
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        "User not found."
+                });
 
             }
 
 
             if (
-                !user.otpExpiresAt ||
-                user.otpExpiresAt <
-                new Date() ||
-                user.otp !==
-                otp
+                !user.otp ||
+                !user.otpExpiresAt
             ) {
 
-                return res
-                    .status(400)
-                    .json({
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "OTP not found. Please request a new OTP."
+                });
 
-                        message:
-                            "Invalid or expired OTP."
+            }
 
-                    });
+
+            if (
+                user.otpExpiresAt <
+                new Date()
+            ) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "OTP has expired. Please request a new OTP."
+                });
+
+            }
+
+
+            if (
+                String(user.otp) !==
+                String(otp).trim()
+            ) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Invalid OTP."
+                });
 
             }
 
@@ -1097,18 +1091,25 @@ exports.resetPassword =
             await user.save();
 
 
-            res.json({
-
+            return res.status(200).json({
+                success: true,
                 message:
-                    "Password reset successfully."
-
+                    "Password reset successfully. You can now login."
             });
 
-        } catch (
-        error
-        ) {
 
-            next(error);
+        } catch (error) {
+
+            console.error(
+                "RESET PASSWORD ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    "Password reset failed."
+            });
 
         }
 

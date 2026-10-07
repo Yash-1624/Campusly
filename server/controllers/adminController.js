@@ -1,148 +1,147 @@
-const User =
-    require("../models/User");
-
-const Event =
-    require("../models/Event");
-
-const Registration =
-    require("../models/Registration");
-
-const Payment =
-    require("../models/Payment");
+const User = require("../models/User");
+const Event = require("../models/Event");
+const Registration = require("../models/Registration");
+const Payment = require("../models/Payment");
 
 
 /*
 |--------------------------------------------------------------------------
 | GET ALL STUDENTS
 |--------------------------------------------------------------------------
-|
 | GET /api/admin/students
-|
+|--------------------------------------------------------------------------
 */
 
-exports.getStudents =
-    async (
-        req,
-        res,
-        next
-    ) => {
-
-        try {
-
-            const students =
-                await User.find({
-                    role: "student"
-                })
-                    .select(
-                        "-password -otp -otpExpiresAt"
-                    )
-                    .sort({
-                        createdAt: -1
-                    });
-
-
-            res.json({
-                students
+exports.getStudents = async (req, res, next) => {
+    try {
+        const students = await User.find({
+            role: "student"
+        })
+            .select("-password -otp -otpExpiresAt")
+            .sort({
+                createdAt: -1
             });
 
-        } catch (error) {
+        res.json({
+            success: true,
+            students
+        });
 
-            next(error);
-
-        }
-    };
+    } catch (error) {
+        next(error);
+    }
+};
 
 
 /*
 |--------------------------------------------------------------------------
 | GET STUDENT BY ID
 |--------------------------------------------------------------------------
-|
 | GET /api/admin/students/:id
-|
+|--------------------------------------------------------------------------
 */
 
-exports.getStudentById =
-    async (
-        req,
-        res,
-        next
-    ) => {
+exports.getStudentById = async (req, res, next) => {
+    try {
+        const student = await User.findOne({
+            _id: req.params.id,
+            role: "student"
+        })
+            .select("-password -otp -otpExpiresAt");
 
-        try {
-
-            const student =
-                await User.findOne({
-                    _id:
-                        req.params.id,
-
-                    role:
-                        "student"
-                })
-                    .select(
-                        "-password -otp -otpExpiresAt"
-                    );
-
-
-            if (!student) {
-
-                return res
-                    .status(404)
-                    .json({
-                        message:
-                            "Student not found."
-                    });
-
-            }
-
-
-            const registrations =
-                await Registration.find({
-                    student:
-                        student._id
-                })
-                    .populate(
-                        "event",
-                        "name category date"
-                    )
-                    .populate(
-                        "payment",
-                        "status transactionId amount"
-                    );
-
-
-            res.json({
-                student,
-                registrations
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                message: "Student not found."
             });
-
-        } catch (error) {
-
-            next(error);
-
         }
-    };
+
+        const registrations = await Registration.find({
+            student: student._id
+        })
+            .populate(
+                "event",
+                "name category date location fee"
+            )
+            .populate(
+                "payment",
+                "status transactionId amount razorpayOrderId razorpayPaymentId"
+            );
+
+        res.json({
+            success: true,
+            student,
+            registrations
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 
 
 /*
 |--------------------------------------------------------------------------
 | GET ADMIN STATISTICS
 |--------------------------------------------------------------------------
-|
 | GET /api/admin/stats
-|
+|--------------------------------------------------------------------------
 */
 
-exports.getStats =
-    async (
-        req,
-        res,
-        next
-    ) => {
+exports.getStats = async (req, res, next) => {
+    try {
+        const [
+            totalStudents,
+            totalEvents,
+            activeEvents,
+            totalRegistrations,
+            successfulPayments,
+            pendingPayments,
+            upcomingEvents
+        ] = await Promise.all([
 
-        try {
+            User.countDocuments({
+                role: "student"
+            }),
 
-            const [
+            Event.countDocuments(),
+
+            Event.countDocuments({
+                status: {
+                    $in: [
+                        "Published",
+                        "Registration Open"
+                    ]
+                }
+            }),
+
+            Registration.countDocuments(),
+
+            Payment.countDocuments({
+                status: "Successful"
+            }),
+
+            Payment.countDocuments({
+                status: "Pending"
+            }),
+
+            Event.countDocuments({
+                date: {
+                    $gte: new Date()
+                },
+                status: {
+                    $nin: [
+                        "Cancelled",
+                        "Completed"
+                    ]
+                }
+            })
+        ]);
+
+        res.json({
+            success: true,
+
+            stats: {
                 totalStudents,
                 totalEvents,
                 activeEvents,
@@ -150,156 +149,82 @@ exports.getStats =
                 successfulPayments,
                 pendingPayments,
                 upcomingEvents
-            ] =
-                await Promise.all([
+            }
+        });
 
-                    User.countDocuments({
-                        role:
-                            "student"
-                    }),
-
-                    Event.countDocuments(),
-
-                    Event.countDocuments({
-                        status: {
-                            $in: [
-                                "Published",
-                                "Registration Open"
-                            ]
-                        }
-                    }),
-
-                    Registration.countDocuments(),
-
-                    Payment.countDocuments({
-                        status:
-                            "Successful"
-                    }),
-
-                    Payment.countDocuments({
-                        status:
-                            "Pending"
-                    }),
-
-                    Event.countDocuments({
-
-                        date: {
-                            $gte:
-                                new Date()
-                        },
-
-                        status: {
-                            $nin: [
-                                "Cancelled",
-                                "Completed"
-                            ]
-                        }
-
-                    })
-
-                ]);
-
-
-            res.json({
-
-                stats: {
-
-                    totalStudents,
-
-                    totalEvents,
-
-                    activeEvents,
-
-                    totalRegistrations,
-
-                    successfulPayments,
-
-                    pendingPayments,
-
-                    upcomingEvents
-
-                }
-
-            });
-
-        } catch (error) {
-
-            next(error);
-
-        }
-    };
+    } catch (error) {
+        console.error("Get admin statistics error:", error);
+        next(error);
+    }
+};
 
 
 /*
 |--------------------------------------------------------------------------
 | GET ALL PAYMENTS
 |--------------------------------------------------------------------------
-|
 | GET /api/admin/payments
-|
-| Returns all payment transactions for
-| the Admin Manage Payments page.
-|
+|--------------------------------------------------------------------------
 */
 
-exports.getPayments =
-    async (
-        req,
-        res,
-        next
-    ) => {
+const getPayments = async (req, res) => {
+    try {
+        console.log("========== GET PAYMENTS ==========");
 
-        try {
+        const payments = await Payment.find()
+            .populate(
+                "student",
+                "fullName email mobileNumber collegePid collegeName yearSemester"
+            )
+            .sort({ createdAt: -1 })
+            .lean();
 
-            const payments =
-                await Payment.find()
+        const result = await Promise.all(
+            payments.map(async (payment) => {
+                let registration = null;
+                let event = null;
 
-                    /*
-                     * Student information
-                     */
-                    .populate(
-                        "student",
-                        "fullName email mobileNumber collegeName yearSemester"
+                // Get Registration
+                if (payment.registration) {
+                    registration = await Registration.findById(
+                        payment.registration
+                    ).lean();
+                }
+
+                // Get Event through Registration
+                if (registration && registration.event) {
+                    event = await Event.findById(
+                        registration.event
                     )
+                        .select("name category date location fee")
+                        .lean();
+                }
 
-                    /*
-                     * Event information
-                     */
-                    .populate(
-                        "event",
-                        "name category date location fee"
-                    )
+                return {
+                    ...payment,
+                    registration,
+                    event
+                };
+            })
+        );
 
-                    /*
-                     * Registration information
-                     */
-                    .populate(
-                        "registration",
-                        "registrationId participationType teamName numberOfMembers registrationStatus"
-                    )
+        console.log("Payments found:", result.length);
 
-                    /*
-                     * Latest payments first
-                     */
-                    .sort({
-                        createdAt: -1
-                    });
+        return res.status(200).json({
+            success: true,
+            payments: result
+        });
 
+    } catch (error) {
+        console.error("========== GET PAYMENTS ERROR ==========");
+        console.error(error);
+        console.error("Message:", error.message);
 
-            res.json({
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
 
-                payments
-
-            });
-
-        } catch (error) {
-
-            console.error(
-                "Get all payments error:",
-                error
-            );
-
-            next(error);
-
-        }
-    };
+module.exports.getPayments = getPayments;

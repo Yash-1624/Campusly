@@ -8,454 +8,189 @@ const {
     verifyRazorpayPayment
 } = require("../services/paymentService");
 
+const {
+    createTicketForRegistration
+} = require("../services/ticketService");
 
-// ========================================
-// CREATE PAYMENT / RAZORPAY ORDER
-// ========================================
 
+// =====================================================
+// CREATE PAYMENT
+// =====================================================
 const createPayment = async (req, res) => {
-
     try {
+        const { registrationId } = req.body;
 
-        const {
-            registrationId
-        } = req.body;
+        console.log("CREATE PAYMENT REQUEST:", {
+            registrationId,
+            userId: req.user?._id
+        });
 
-
-        // ========================================
-        // VALIDATE REGISTRATION ID
-        // ========================================
-
-        if (
-            !registrationId ||
-            !mongoose.Types.ObjectId.isValid(
-                registrationId
-            )
-        ) {
-
+        if (!registrationId) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid registration ID."
+                message: "Registration ID is required"
             });
         }
 
+        if (!mongoose.Types.ObjectId.isValid(registrationId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid registration ID"
+            });
+        }
 
-        // ========================================
-        // FIND REGISTRATION
-        // ========================================
-
-        const registration =
-            await Registration.findById(
-                registrationId
-            )
-                .populate("event")
-                .populate("student");
-
+        const registration = await Registration.findById(
+            registrationId
+        ).populate("event");
 
         if (!registration) {
-
             return res.status(404).json({
                 success: false,
-                message: "Registration not found."
+                message: "Registration not found"
             });
         }
 
-
-        // ========================================
-        // CHECK OWNERSHIP
-        // ========================================
-
+        // Make sure the logged-in student owns this registration
         if (
-            registration.student._id.toString() !==
-            req.user._id.toString() &&
-            req.user.role !== "admin"
+            registration.student.toString() !==
+            req.user._id.toString()
         ) {
-
             return res.status(403).json({
                 success: false,
-                message:
-                    "You are not allowed to pay for this registration."
+                message: "You are not allowed to pay for this registration"
             });
         }
-
-
-        // ========================================
-        // ALREADY CONFIRMED
-        // ========================================
-
-        if (
-            registration.registrationStatus ===
-            "Confirmed"
-        ) {
-
-            const existingPayment =
-                await Payment.findOne({
-                    registration:
-                        registration._id
-                });
-
-
-            return res.status(200).json({
-
-                success: true,
-
-                alreadyPaid: true,
-
-                payment:
-                    existingPayment,
-
-                registration
-
-            });
-        }
-
-
-        // ========================================
-        // CHECK EVENT
-        // ========================================
 
         if (!registration.event) {
-
             return res.status(400).json({
                 success: false,
-                message:
-                    "Event information not found for this registration."
+                message: "Event not found for this registration"
             });
         }
 
+        const amount = Number(registration.event.fee || 0);
 
-        // ========================================
-        // GET EVENT FEE
-        // ========================================
+        console.log("Event:", registration.event.name);
+        console.log("Event fee:", amount);
 
-        const eventFee =
-            Number(
-                registration.event.fee
-            ) || 0;
-
-
-        if (eventFee < 0) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Invalid event fee."
-            });
-        }
-
-
-        // ========================================
-        // FIND / CREATE PAYMENT RECORD
-        // ========================================
-
-        let payment =
-            await Payment.findOne({
-                registration:
-                    registration._id
-            });
-
-
-        if (!payment) {
-
-            payment =
-                await Payment.create({
-
-                    registration:
-                        registration._id,
-
-                    student:
-                        registration.student._id,
-
-                    amount:
-                        eventFee,
-
-                    currency:
-                        "INR",
-
-                    paymentMethod:
-                        "RAZORPAY",
-
-                    gateway:
-                        "RAZORPAY",
-
-                    status:
-                        "Pending"
-
-                });
-
-        } else {
-
-            // Keep payment information synchronized
-            payment.amount = eventFee;
-            payment.currency = "INR";
-            payment.gateway = "RAZORPAY";
-
-            await payment.save();
-        }
-
-
-        // ========================================
+        // -------------------------------------------------
         // FREE EVENT
-        // ========================================
-
-        if (eventFee === 0) {
-
-            payment.status =
-                "Successful";
-
-            payment.transactionId =
-                `FREE-${Date.now()}`;
-
-            payment.paymentMethod =
-                "FREE";
-
-            await payment.save();
-
-
-            registration.payment.status =
-                "Successful";
-
-            registration.payment.paymentId =
-                payment._id;
-
-            registration.registrationStatus =
-                "Confirmed";
+        // -------------------------------------------------
+        if (amount <= 0) {
+            registration.registrationStatus = "Confirmed";
+            registration.payment.status = "Successful";
 
             await registration.save();
 
-
-            // Generate ticket for free event
-            let ticket = null;
-
-            try {
-
-                const {
-                    createTicket
-                } =
-                    require(
-                        "../services/ticketService"
-                    );
-
-
-                ticket =
-                    await createTicket({
-                        registrationId:
-                            registration._id
-                    });
-
-            } catch (ticketError) {
-
-                console.error(
-                    "Free event ticket creation error:",
-                    ticketError
-                );
-            }
-
+            const ticket = await createTicketForRegistration(
+                registration._id
+            );
 
             return res.status(200).json({
-
                 success: true,
-
+                message: "Registration confirmed successfully",
                 freeEvent: true,
-
-                payment,
-
-                registration,
-
                 ticket
-
             });
         }
 
+        // -------------------------------------------------
+        // CHECK EXISTING PAYMENT
+        // -------------------------------------------------
+        let payment = await Payment.findOne({
+            registration: registration._id
+        });
 
-        // ========================================
-        // CREATE RAZORPAY ORDER
-        // ========================================
-
-        console.log(
-            "Creating Razorpay order..."
-        );
-
-        console.log(
-            "Amount:",
-            eventFee
-        );
-
-        console.log(
-            "Registration:",
-            registration.registrationId
-        );
-
-        console.log(
-            "Razorpay Key ID loaded:",
-            process.env.RAZORPAY_KEY_ID
-                ? "YES"
-                : "NO"
-        );
-
-        console.log(
-            "Razorpay Secret loaded:",
-            process.env.RAZORPAY_KEY_SECRET
-                ? "YES"
-                : "NO"
-        );
-
-
-        const order =
-            await createRazorpayOrder({
-
-                amount:
-                    eventFee,
-
-                receipt:
-                    registration.registrationId,
-
-                notes: {
-
-                    registrationId:
-                        registration._id.toString(),
-
-                    eventId:
-                        registration.event._id.toString(),
-
-                    studentId:
-                        registration.student._id.toString()
-
-                }
-
+        if (
+            payment &&
+            payment.status === "Successful"
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Payment has already been completed"
             });
+        }
 
+        // -------------------------------------------------
+        // CREATE PAYMENT DOCUMENT
+        // -------------------------------------------------
+        if (!payment) {
+            payment = await Payment.create({
+                registration: registration._id,
+                student: registration.student,
+                event: registration.event._id,
+                amount,
+                currency: "INR",
+                status: "Pending"
+            });
+        } else {
+            payment.amount = amount;
+            payment.status = "Pending";
+            await payment.save();
+        }
 
-        // ========================================
-        // SAVE RAZORPAY ORDER
-        // ========================================
+        // -------------------------------------------------
+        // CREATE RAZORPAY ORDER
+        // -------------------------------------------------
+        const order = await createRazorpayOrder({
+            amount,
+            receipt: registration.registrationId,
+            notes: {
+                registrationId: registration._id.toString(),
+                studentId: registration.student.toString(),
+                eventId: registration.event._id.toString()
+            }
+        });
 
-        payment.razorpayOrderId =
-            order.id;
+        console.log("RAZORPAY ORDER CREATED:", order.id);
 
-        payment.status =
-            "Pending";
-
+        payment.orderId = order.id;
         await payment.save();
 
-
-        // ========================================
-        // UPDATE REGISTRATION PAYMENT
-        // ========================================
-
-        registration.payment.status =
-            "Pending";
-
-        registration.payment.paymentId =
-            payment._id;
+        registration.payment = {
+            status: "Pending",
+            paymentId: payment._id
+        };
 
         await registration.save();
 
-
-        // ========================================
-        // SEND RESPONSE
-        // ========================================
-
         return res.status(200).json({
-
             success: true,
-
-            message:
-                "Razorpay order created successfully.",
-
-            payment,
-
-            registration,
-
-            razorpay: {
-
-                keyId:
-                    process.env.RAZORPAY_KEY_ID,
-
-                orderId:
-                    order.id,
-
-                amount:
-                    order.amount,
-
-                currency:
-                    order.currency
-
-            }
-
+            message: "Payment order created",
+            key: process.env.RAZORPAY_KEY_ID,
+            orderId: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            registrationId: registration._id
         });
 
     } catch (error) {
-
-        // ========================================
-        // DETAILED ERROR LOG
-        // ========================================
-
-        console.error(
-            "========================================"
-        );
-
-        console.error(
-            "CREATE RAZORPAY PAYMENT ERROR"
-        );
-
-        console.error(
-            "Message:",
-            error.message
-        );
-
-        console.error(
-            "Stack:",
-            error.stack
-        );
-
-        console.error(
-            "Full Error:",
-            error
-        );
-
-        console.error(
-            "========================================"
-        );
-
+        console.error("========================================");
+        console.error("CREATE RAZORPAY PAYMENT ERROR");
+        console.error("Message:", error.message);
+        console.error("Stack:", error.stack);
+        console.error("Full Error:", error);
+        console.error("========================================");
 
         return res.status(500).json({
-
             success: false,
-
-            message:
-                error.message ||
-                "Unable to create payment."
-
+            message: error.message || "Failed to create payment order"
         });
     }
 };
 
 
-// ========================================
-// VERIFY RAZORPAY PAYMENT
-// ========================================
-
+// =====================================================
+// VERIFY PAYMENT
+// =====================================================
 const verifyPayment = async (req, res) => {
-
     try {
-
         const {
-
             registrationId,
-
             razorpay_order_id,
-
             razorpay_payment_id,
-
             razorpay_signature
-
         } = req.body;
-
-
-        // ========================================
-        // VALIDATE PAYMENT DATA
-        // ========================================
 
         if (
             !registrationId ||
@@ -463,321 +198,115 @@ const verifyPayment = async (req, res) => {
             !razorpay_payment_id ||
             !razorpay_signature
         ) {
-
             return res.status(400).json({
-
                 success: false,
-
-                message:
-                    "Incomplete payment information."
-
+                message: "Payment verification data is incomplete"
             });
         }
 
-
-        // ========================================
-        // VALIDATE REGISTRATION ID
-        // ========================================
-
-        if (
-            !mongoose.Types.ObjectId.isValid(
-                registrationId
-            )
-        ) {
-
+        if (!mongoose.Types.ObjectId.isValid(registrationId)) {
             return res.status(400).json({
-
                 success: false,
-
-                message:
-                    "Invalid registration ID."
-
+                message: "Invalid registration ID"
             });
         }
 
-
-        // ========================================
-        // FIND REGISTRATION
-        // ========================================
-
-        const registration =
-            await Registration.findById(
-                registrationId
-            )
-                .populate("event")
-                .populate("student");
-
+        const registration = await Registration.findById(
+            registrationId
+        ).populate("event");
 
         if (!registration) {
-
             return res.status(404).json({
-
                 success: false,
-
-                message:
-                    "Registration not found."
-
+                message: "Registration not found"
             });
         }
-
-
-        // ========================================
-        // VERIFY OWNERSHIP
-        // ========================================
 
         if (
-            registration.student._id.toString() !==
-            req.user._id.toString() &&
-            req.user.role !== "admin"
+            registration.student.toString() !==
+            req.user._id.toString()
         ) {
-
             return res.status(403).json({
-
                 success: false,
-
-                message:
-                    "Payment verification not allowed."
-
+                message: "You are not allowed to verify this payment"
             });
         }
 
-
-        // ========================================
-        // FIND PAYMENT
-        // ========================================
-
-        const payment =
-            await Payment.findOne({
-
-                registration:
-                    registration._id
-
-            });
-
+        const payment = await Payment.findOne({
+            registration: registration._id
+        });
 
         if (!payment) {
-
             return res.status(404).json({
-
                 success: false,
-
-                message:
-                    "Payment record not found."
-
+                message: "Payment record not found"
             });
         }
 
-
-        // ========================================
-        // VERIFY ORDER ID
-        // ========================================
-
-        if (
-            payment.razorpayOrderId &&
-            payment.razorpayOrderId !==
-            razorpay_order_id
-        ) {
-
+        if (payment.orderId !== razorpay_order_id) {
             return res.status(400).json({
-
                 success: false,
-
-                message:
-                    "Razorpay order ID does not match."
-
+                message: "Payment order ID does not match"
             });
         }
 
+        const isValid = verifyRazorpayPayment({
+            orderId: razorpay_order_id,
+            paymentId: razorpay_payment_id,
+            signature: razorpay_signature
+        });
 
-        // ========================================
-        // VERIFY SIGNATURE
-        // ========================================
-
-        const valid =
-            verifyRazorpayPayment({
-
-                orderId:
-                    razorpay_order_id,
-
-                paymentId:
-                    razorpay_payment_id,
-
-                signature:
-                    razorpay_signature
-
-            });
-
-
-        if (!valid) {
-
+        if (!isValid) {
             return res.status(400).json({
-
                 success: false,
-
-                message:
-                    "Payment signature verification failed."
-
+                message: "Invalid payment signature"
             });
         }
 
-
-        // ========================================
-        // SAVE PAYMENT
-        // ========================================
-
-        payment.status =
-            "Successful";
-
-        payment.paymentMethod =
-            "RAZORPAY";
-
-        payment.gateway =
-            "RAZORPAY";
-
-        payment.transactionId =
-            razorpay_payment_id;
-
-        payment.razorpayOrderId =
-            razorpay_order_id;
-
-        payment.razorpayPaymentId =
-            razorpay_payment_id;
-
-        payment.razorpaySignature =
-            razorpay_signature;
-
+        payment.paymentId = razorpay_payment_id;
+        payment.signature = razorpay_signature;
+        payment.status = "Successful";
 
         await payment.save();
 
+        registration.payment = {
+            status: "Successful",
+            paymentId: payment._id
+        };
 
-        // ========================================
-        // CONFIRM REGISTRATION
-        // ========================================
-
-        registration.payment.status =
-            "Successful";
-
-        registration.payment.paymentId =
-            payment._id;
-
-        registration.registrationStatus =
-            "Confirmed";
-
+        registration.registrationStatus = "Confirmed";
 
         await registration.save();
 
-
-        // ========================================
-        // GENERATE EVENT ENTRY TICKET
-        // ========================================
-
-        let ticket = null;
-
-
-        try {
-
-            const {
-                createTicket
-            } =
-                require(
-                    "../services/ticketService"
-                );
-
-
-            ticket =
-                await createTicket({
-
-                    registrationId:
-                        registration._id
-
-                });
-
-        } catch (ticketError) {
-
-            console.error(
-                "Ticket creation error:",
-                ticketError
-            );
-
-            // Payment remains successful.
-            // Ticket can be generated again later.
-        }
-
-
-        // ========================================
-        // RESPONSE
-        // ========================================
+        // -------------------------------------------------
+        // CREATE EVENT ENTRY TICKET
+        // -------------------------------------------------
+        const ticket = await createTicketForRegistration(
+            registration._id
+        );
 
         return res.status(200).json({
-
             success: true,
-
-            message:
-                "Payment successful.",
-
-            payment,
-
-            registration,
-
+            message: "Payment verified successfully",
             ticket
-
         });
 
     } catch (error) {
-
-        // ========================================
-        // DETAILED ERROR LOG
-        // ========================================
-
-        console.error(
-            "========================================"
-        );
-
-        console.error(
-            "VERIFY RAZORPAY PAYMENT ERROR"
-        );
-
-        console.error(
-            "Message:",
-            error.message
-        );
-
-        console.error(
-            "Stack:",
-            error.stack
-        );
-
-        console.error(
-            "Full Error:",
-            error
-        );
-
-        console.error(
-            "========================================"
-        );
-
+        console.error("========================================");
+        console.error("VERIFY RAZORPAY PAYMENT ERROR");
+        console.error("Message:", error.message);
+        console.error("Stack:", error.stack);
+        console.error("========================================");
 
         return res.status(500).json({
-
             success: false,
-
-            message:
-                error.message ||
-                "Payment verification failed."
-
+            message: error.message || "Payment verification failed"
         });
     }
 };
 
 
-// ========================================
-// EXPORT
-// ========================================
-
 module.exports = {
-
     createPayment,
-
     verifyPayment
-
 };

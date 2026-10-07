@@ -1,94 +1,66 @@
 require("dotenv").config();
 
-const bcrypt =
-    require("bcryptjs");
+const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
+const User = require("../models/User");
 
-const mongoose =
-    require("mongoose");
+const seedAdmin = async () => {
+    try {
+        await mongoose.connect(process.env.MONGO_URI);
 
-const User =
-    require("../models/User");
+        const email = "admin@example.com";
+        const password = "Admin@12345";
 
-const seedAdmin =
-    async () => {
-        try {
-            await mongoose.connect(
-                process.env.MONGO_URI
-            );
+        const existing = await User.findOne({
+            email
+        });
 
-            const email =
-                "admin@example.com";
-
-            const password =
-                "Admin@12345";
-
-            const existing =
-                await User.findOne({
-                    email
-                });
-
-            if (existing) {
-                console.log(
-                    "Admin already exists."
-                );
-
-                process.exit(0);
-            }
-
-            const hashedPassword =
-                await bcrypt.hash(
-                    password,
-                    12
-                );
-
-            await User.create({
-                fullName:
-                    "System Administrator",
-
-                email,
-
-                mobileNumber:
-                    "9999999999",
-
-                collegeName:
-                    "College Administration",
-
-                yearSemester:
-                    "Administrator",
-
-                password:
-                    hashedPassword,
-
-                role:
-                    "admin",
-
-                isEmailVerified:
-                    true
-            });
-
-            console.log(
-                "Admin created successfully."
-            );
-
-            console.log(
-                "Email:",
-                email
-            );
-
-            console.log(
-                "Password:",
-                password
-            );
-
+        if (existing) {
+            console.log("Admin already exists.");
             process.exit(0);
-
-        } catch (error) {
-            console.error(
-                error
-            );
-
-            process.exit(1);
         }
-    };
+
+        const hashedPassword = await bcrypt.hash(
+            password,
+            12
+        );
+
+        await User.create({
+            fullName: "System Administrator",
+
+            // Required College PID
+            collegePid: "ADMIN001",
+
+            email,
+
+            mobileNumber: "9999999999",
+
+            collegeName: "College Administration",
+
+            yearSemester: "Administrator",
+
+            password: hashedPassword,
+
+            role: "admin",
+
+            isEmailVerified: true
+        });
+
+        console.log("Admin created successfully.");
+
+        console.log("Email:", email);
+
+        console.log("Password:", password);
+
+        console.log("College PID:", "ADMIN001");
+
+        process.exit(0);
+
+    } catch (error) {
+        console.error(error);
+
+        process.exit(1);
+    }
+};
 
 seedAdmin();
