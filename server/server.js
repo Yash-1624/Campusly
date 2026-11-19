@@ -1,3 +1,4 @@
+
 const dotenv = require("dotenv");
 
 // Load environment variables FIRST
@@ -8,20 +9,11 @@ const cors = require("cors");
 
 const connectDB = require("./config/db");
 
-
-// ========================================
-// DATABASE CONNECTION
-// ========================================
-
-connectDB();
-
-
 // ========================================
 // CREATE EXPRESS APP
 // ========================================
 
 const app = express();
-
 
 // ========================================
 // MIDDLEWARE
@@ -29,10 +21,7 @@ const app = express();
 
 app.use(
     cors({
-        origin:
-            process.env.CLIENT_URL ||
-            "http://localhost:5173",
-
+        origin: process.env.CLIENT_URL || "http://localhost:5173",
         credentials: true
     })
 );
@@ -40,66 +29,39 @@ app.use(
 // Parse JSON request body
 app.use(express.json({ limit: "5mb" }));
 
-
 // ========================================
 // ROUTES
 // ========================================
 
-// Authentication
+// Analytics
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
 
-app.use(
-    "/api/auth",
-    require("./routes/authRoutes")
-);
+// Authentication
+app.use("/api/auth", require("./routes/authRoutes"));
 
 // Student Profile
-app.use(
-    "/api/profile",
-    require("./routes/profileRoutes")
-);
+app.use("/api/profile", require("./routes/profileRoutes"));
 
 // Events
-app.use(
-    "/api/events",
-    require("./routes/eventRoutes")
-);
+app.use("/api/events", require("./routes/eventRoutes"));
 
 // Event Categories
-app.use(
-    "/api/categories",
-    require("./routes/categoryRoutes")
-);
+app.use("/api/categories", require("./routes/categoryRoutes"));
 
 // Event Registrations
-app.use(
-    "/api/registrations",
-    require("./routes/registrationRoutes")
-);
+app.use("/api/registrations", require("./routes/registrationRoutes"));
 
 // Payments / Razorpay
-app.use(
-    "/api/payments",
-    require("./routes/paymentRoutes")
-);
+app.use("/api/payments", require("./routes/paymentRoutes"));
 
 // Admin
-app.use(
-    "/api/admin",
-    require("./routes/adminRoutes")
-);
+app.use("/api/admin", require("./routes/adminRoutes"));
 
 // Tickets / QR Scanner
-app.use(
-    "/api/tickets",
-    require("./routes/ticketRoutes")
-);
+app.use("/api/tickets", require("./routes/ticketRoutes"));
 
-app.use(
-    "/api/volunteer",
-    require("./routes/volunteerRoutes")
-);
-
+// Volunteer
+app.use("/api/volunteer", require("./routes/volunteerRoutes"));
 
 // ========================================
 // API TEST ROUTE
@@ -108,11 +70,9 @@ app.use(
 app.get("/", (req, res) => {
     res.status(200).json({
         success: true,
-        message:
-            "College Event Management API is running"
+        message: "College Event Management API is running"
     });
 });
-
 
 // ========================================
 // 404 ROUTE
@@ -125,67 +85,55 @@ app.use((req, res) => {
     });
 });
 
-
 // ========================================
 // GLOBAL ERROR HANDLER
 // ========================================
 
 app.use((err, req, res, next) => {
+    console.error("Server Error:", err);
 
-    console.error(
-        "Server Error:",
-        err
-    );
-
-    res.status(
-        err.status || 500
-    ).json({
-
+    res.status(err.status || 500).json({
         success: false,
-
-        message:
-            err.message ||
-            "Internal server error"
+        message: err.message || "Internal server error"
     });
 });
 
-
 // ========================================
-// START SERVER
+// START SERVER AFTER DATABASE CONNECTION
 // ========================================
 
-const PORT =
-    process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
-app.listen(
-    PORT,
-    () => {
+const startServer = async () => {
+    try {
+        await connectDB();
 
-        console.log(
-            `Server running on http://localhost:${PORT}`
+        app.listen(PORT, "0.0.0.0", () => {
+            console.log(`Server running on port ${PORT}`);
+
+            console.log(
+                `Client URL: ${process.env.CLIENT_URL || "http://localhost:5173"
+                }`
+            );
+
+            console.log(
+                `Razorpay Key ID loaded: ${process.env.RAZORPAY_KEY_ID ? "YES" : "NO"
+                }`
+            );
+
+            console.log(
+                `Razorpay Secret loaded: ${process.env.RAZORPAY_KEY_SECRET ? "YES" : "NO"
+                }`
+            );
+        });
+    } catch (error) {
+        console.error(
+            "Server startup failed:",
+            error.message
         );
 
-        console.log(
-            `Client URL: ${
-                process.env.CLIENT_URL ||
-                "http://localhost:5173"
-            }`
-        );
-
-        console.log(
-            `Razorpay Key ID loaded: ${
-                process.env.RAZORPAY_KEY_ID
-                    ? "YES"
-                    : "NO"
-            }`
-        );
-
-        console.log(
-            `Razorpay Secret loaded: ${
-                process.env.RAZORPAY_KEY_SECRET
-                    ? "YES"
-                    : "NO"
-            }`
-        );
+        process.exit(1);
     }
-);
+};
+
+startServer();
