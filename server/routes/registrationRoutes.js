@@ -5,7 +5,8 @@ const {
     createRegistration,
     getMyRegistrations,
     getRegistrationById,
-    getAllRegistrations
+    getAllRegistrations,
+    adminAddRegistration
 } = require("../controllers/registrationController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -28,6 +29,13 @@ router.get("/my", protect, getMyRegistrations);
 // ===============================
 
 // Get all registrations
+router.post(
+    "/admin/add",
+    protect,
+    adminOnly,
+    adminAddRegistration
+);
+
 router.get(
     "/admin/all",
     protect,

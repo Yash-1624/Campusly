@@ -65,6 +65,7 @@ export default function ManageEvents() {
 
     useEffect(() => {
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         load();
 
     }, []);
@@ -204,7 +205,7 @@ export default function ManageEvents() {
 
                 <Link
                     className="button primary"
-                    to="/admin/events/add"
+                    to="/control-center/events/add"
                 >
                     + Add Event
                 </Link>
@@ -245,7 +246,7 @@ export default function ManageEvents() {
 
                     <Link
                         className="button primary"
-                        to="/admin/events/add"
+                        to="/control-center/events/add"
                     >
                         Create Your First Event
                     </Link>

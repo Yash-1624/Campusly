@@ -1,0 +1,30 @@
+.add-event-page {
+  width: min(1120px, calc(100% - 40px));
+  max-width: 1120px;
+  padding: 38px 0 72px;
+}
+.add-event-page .form-card { width:100%;padding:clamp(22px,4vw,42px);border:1px solid #e7e8f4;border-radius:24px;background:#fff;box-shadow:0 16px 45px rgba(34,40,90,.07);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 22px; }
+.add-form-heading { grid-column:1/-1;padding-bottom:17px;border-bottom:1px solid #ececf5; }
+.add-form-heading h2 { margin:8px 0 4px;color:#171a2d;font-size:1.65rem;letter-spacing:-.04em; }
+.add-form-heading p { margin:0;color:#747990;font-size:.9rem; }
+.add-event-eyebrow { display:inline-flex;align-items:center;gap:9px;color:#7264f6;font-size:.7rem;font-weight:850;letter-spacing:.16em; }
+.add-event-page .form-card > label,.add-event-page .form-card > .form-group,.add-event-page .form-card > .team-settings { margin:0; }
+.add-event-page .form-card > label { display:flex;flex-direction:column;gap:8px;color:#252943;font-size:.84rem;font-weight:750; }
+.add-event-page .form-card > label input,.add-event-page .form-card > label textarea,.add-event-page .form-card > label select { margin-top:0;border:1px solid #e1e3ef;border-radius:12px;background:#fbfbfe;transition:border-color .2s,box-shadow .2s,background .2s; }
+.add-event-page .form-card > label input:focus,.add-event-page .form-card > label textarea:focus,.add-event-page .form-card > label select:focus { border-color:#8173f5;background:#fff;box-shadow:0 0 0 4px rgba(111,94,245,.12); }
+.add-event-page .form-card > label:nth-of-type(2),.add-event-page .form-card > label:nth-of-type(3),.add-event-page .form-card > .event-image-field,.add-event-page .form-card > .team-settings,.add-event-page .form-card > .alert,.add-event-page .form-card > button { grid-column:1/-1; }
+.add-event-page .form-card > label:nth-of-type(2) textarea { min-height:112px; }
+.add-event-page .event-image-field { padding:18px;border:1px dashed #c9c7f3;border-radius:15px;background:linear-gradient(120deg,#f8f7ff,#fbfcff); }
+.add-event-page .event-image-field > label { display:block;margin-bottom:10px;color:#252943;font-size:.84rem;font-weight:750; }
+.add-event-page .event-image-field input[type=file] { padding:12px;border:1px solid #e5e4f4;border-radius:11px;background:#fff; }
+.add-event-page .event-image-preview-wrap { display:flex;align-items:center;gap:14px;margin-top:12px; }
+.add-event-page .event-image-preview { width:110px;height:72px;object-fit:cover;border-radius:10px; }
+.add-event-page .category-input-help,.add-event-page .hint { color:#777c94;line-height:1.55; }
+.add-event-page .radio-row { display:flex;gap:12px; }
+.add-event-page .radio-row label { display:flex;align-items:center;gap:9px;flex:1;padding:13px;border:1px solid #e4e5f0;border-radius:12px;background:#fbfbfe;color:#30334b;font-weight:700; }
+.add-event-page .radio-row input { width:17px;height:17px;accent-color:#6758e8; }
+.add-event-page .team-settings { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px;border-radius:15px;background:#f7f6ff; }
+.add-event-page .team-settings h2 { grid-column:1/-1;margin:0;color:#29244e;font-size:1rem; }
+.add-event-page .team-settings label { display:grid;gap:7px;font-size:.83rem;font-weight:700; }
+.add-event-page .form-card > button { justify-self:start;min-width:210px;min-height:50px;border-radius:13px;font-weight:800; }
+@media(max-width:760px) { .add-event-page{width:min(100% - 24px,600px);padding-top:20px}.add-event-page .form-card{grid-template-columns:1fr;padding:24px 18px;gap:17px}.add-event-page .form-card>*{grid-column:1/-1!important}.add-event-page .team-settings{grid-template-columns:1fr 1fr} }

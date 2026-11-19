@@ -1,4 +1,5 @@
 const express = require("express");
+const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -7,6 +8,7 @@ const {
     verifyEmail,
     resendVerificationOTP,
     login,
+    getCurrentUser,
     forgotPassword,
     resetPassword
 } = require("../controllers/authController");
@@ -49,6 +51,12 @@ router.post(
 router.post(
     "/login",
     login
+);
+
+router.get(
+    "/me",
+    protect,
+    getCurrentUser
 );
 
 

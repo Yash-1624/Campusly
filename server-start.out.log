@@ -1,0 +1,5 @@
+Server running on http://localhost:5000
+Client URL: http://localhost:5173
+Razorpay Key ID loaded: YES
+Razorpay Secret loaded: YES
+MongoDB connected successfully

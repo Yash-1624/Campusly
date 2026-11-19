@@ -414,6 +414,14 @@ exports.createEvent = async (
         }
 
 
+        // Validate optional event poster data URL.
+        if (req.body.imageUrl && !/^data:image\/(jpeg|jpg|png|webp);base64,/.test(req.body.imageUrl)) {
+            return res.status(400).json({ success: false, message: "Please upload a valid JPG, PNG, or WebP event image." });
+        }
+        if ((req.body.imageUrl || "").length > 2800000) {
+            return res.status(400).json({ success: false, message: "Event image must be 2 MB or smaller." });
+        }
+
         // ========================================
         // CREATE EVENT
         // ========================================
@@ -426,6 +434,9 @@ exports.createEvent = async (
 
                 description:
                     String(description).trim(),
+
+                imageUrl:
+                    req.body.imageUrl || "",
 
                 category:
                     categoryRecord.name,
@@ -575,6 +586,20 @@ exports.updateEvent = async (
         const body = {
             ...req.body
         };
+
+        if (body.imageUrl !== undefined) {
+            if (body.imageUrl && !/^data:image\/(jpeg|jpg|png|webp);base64,/.test(body.imageUrl)) {
+                return res.status(400).json({ success: false, message: "Please upload a valid JPG, PNG, or WebP event image." });
+            }
+            if ((body.imageUrl || "").length > 2800000) {
+                return res.status(400).json({ success: false, message: "Event image must be 2 MB or smaller." });
+            }
+        }
+
+        if (body.removeImage === true || body.removeImage === "true") {
+            body.imageUrl = "";
+        }
+        delete body.removeImage;
 
 
         // ========================================

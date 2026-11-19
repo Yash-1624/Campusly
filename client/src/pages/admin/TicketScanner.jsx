@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useRef,
     useState
@@ -15,6 +16,8 @@ export default function TicketScanner() {
 
     const scannerRef =
         useRef(null);
+    const scanningRef =
+        useRef(true);
 
     const [
         result,
@@ -26,10 +29,41 @@ export default function TicketScanner() {
         setError
     ] = useState("");
 
-    const [
-        scanning,
-        setScanning
-    ] = useState(true);
+
+
+    const scanTicket = useCallback(async (qrText) => {
+
+            try {
+
+                setError("");
+
+                const response =
+                    await api.post(
+                        "/tickets/scan",
+                        {
+                            qrPayload:
+                                qrText
+                        }
+                    );
+
+                setResult(
+                    response.data
+                );
+
+            } catch (error) {
+
+                setResult(
+                    error.response?.data ||
+                    null
+                );
+
+                setError(
+                    error.response?.data?.message ||
+                    "Unable to scan ticket."
+                );
+
+            }
+    }, []);
 
 
     useEffect(() => {
@@ -69,21 +103,19 @@ export default function TicketScanner() {
                             decodedText
                         ) => {
 
-                            if (
-                                !scanning
-                            ) {
+                            if (!scanningRef.current) {
                                 return;
                             }
 
-                            setScanning(
-                                false
-                            );
+                            scanningRef.current = false;
 
                             try {
 
                                 await scanner.stop();
 
-                            } catch { }
+                            } catch {
+                                // The scanner may already have stopped after a successful read.
+                            }
 
 
                             await scanTicket(
@@ -130,46 +162,10 @@ export default function TicketScanner() {
 
         };
 
-    }, []);
+    }, [scanTicket]);
 
 
-    const scanTicket =
-        async (
-            qrText
-        ) => {
 
-            try {
-
-                setError("");
-
-                const response =
-                    await api.post(
-                        "/tickets/scan",
-                        {
-                            qrPayload:
-                                qrText
-                        }
-                    );
-
-                setResult(
-                    response.data
-                );
-
-            } catch (error) {
-
-                setResult(
-                    error.response?.data ||
-                    null
-                );
-
-                setError(
-                    error.response?.data?.message ||
-                    "Unable to scan ticket."
-                );
-
-            }
-
-        };
 
 
     const restartScanner =
@@ -177,8 +173,8 @@ export default function TicketScanner() {
 
             setResult(null);
             setError("");
-            setScanning(true);
-
+            scanningRef.current = true;
+    
             window.location.reload();
 
         };

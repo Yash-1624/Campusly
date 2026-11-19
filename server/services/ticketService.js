@@ -253,6 +253,8 @@ module.exports = {
 
     createTicket,
 
+    createTicketForRegistration: (registrationId) => createTicket({ registrationId }),
+
     getTicketByRegistration,
 
     generateTicketId

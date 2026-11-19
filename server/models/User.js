@@ -27,6 +27,26 @@ const userSchema = new mongoose.Schema(
             trim: true
         },
 
+        // Volunteers receive a separate login ID created by the admin.
+        loginId: {
+            type: String,
+            unique: true,
+            sparse: true,
+            trim: true,
+            uppercase: true
+        },
+
+        departmentName: {
+            type: String,
+            trim: true,
+            default: ""
+        },
+
+        assignedEvents: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Event"
+        }],
+
         mobileNumber: {
             type: String,
             required: true,
@@ -36,14 +56,16 @@ const userSchema = new mongoose.Schema(
 
         collegeName: {
             type: String,
-            required: true,
-            trim: true
+            required: function () { return this.role !== "volunteer"; },
+            trim: true,
+            default: ""
         },
 
         yearSemester: {
             type: String,
-            required: true,
-            trim: true
+            required: function () { return this.role !== "volunteer"; },
+            trim: true,
+            default: ""
         },
 
         password: {
@@ -56,7 +78,8 @@ const userSchema = new mongoose.Schema(
             type: String,
             enum: [
                 "student",
-                "admin"
+                "admin",
+                "volunteer"
             ],
             default: "student"
         },

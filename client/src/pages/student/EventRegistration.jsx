@@ -229,23 +229,22 @@ export default function EventRegistration() {
             );
 
 
-        } catch (err) {
+        } catch (error) {
+            console.error("Registration Error:", error);
 
-            console.error(
-                "Registration Error:",
-                err
+            console.log(
+                "Server Response:",
+                JSON.stringify(
+                    error.response?.data,
+                    null,
+                    2
+                )
             );
-
 
             setError(
-                err.response?.data?.message ||
+                error.response?.data?.message ||
                 "Registration failed."
             );
-
-
-        } finally {
-
-            setSubmitting(false);
         }
     };
 
@@ -259,11 +258,6 @@ export default function EventRegistration() {
     ) {
         return <Loading />;
     }
-
-
-    const both =
-        event.participationType.individual &&
-        event.participationType.team;
 
 
     return (

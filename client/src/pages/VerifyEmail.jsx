@@ -34,6 +34,7 @@ export default function VerifyEmail() {
         setOtp
     ] = useState("");
 
+
     const [
         message,
         setMessage
@@ -89,7 +90,7 @@ export default function VerifyEmail() {
                     data
                 } =
                     await api.post(
-                        "/auth/resend-otp",
+                        "/auth/resend-verification-otp",
                         {
                             email
                         }
@@ -128,6 +129,7 @@ export default function VerifyEmail() {
                         {message}
                     </div>
                 )}
+
 
                 {error && (
                     <div className="alert error">

@@ -14,7 +14,11 @@ import {
   AuthProvider
 } from "./context/AuthContext";
 
+
+import { ThemeProvider } from "./context/ThemeContext";
+
 import "./index.css";
+import "./PremiumUI.css";
 
 ReactDOM.createRoot(
   document.getElementById(
@@ -28,7 +32,11 @@ ReactDOM.createRoot(
 
       <AuthProvider>
 
-        <App />
+        <ThemeProvider>
+
+          <App />
+
+        </ThemeProvider>
 
       </AuthProvider>
 

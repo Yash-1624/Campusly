@@ -37,6 +37,9 @@ const publicUser = (user) => {
     return {
         id: user._id,
         fullName: user.fullName,
+        loginId: user.loginId || "",
+        departmentName: user.departmentName || "",
+        assignedEvents: user.assignedEvents || [],
         collegePid: user.collegePid,
         email: user.email,
         mobileNumber: user.mobileNumber,
@@ -365,10 +368,7 @@ exports.signup = async (req, res) => {
                 emailError
             );
 
-            // Remove user if email could not be sent
-            await User.findByIdAndDelete(
-                user._id
-            );
+            await User.findByIdAndDelete(user._id);
 
             return res.status(500).json({
                 success: false,
@@ -757,40 +757,28 @@ exports.login = async (
 
     try {
 
-        const {
-            email,
-            password
-        } = req.body;
+        const { email, loginId, identifier, password } = req.body;
+        const portal = String(req.body.portal || "student").toLowerCase();
+        const suppliedIdentifier = String(identifier || loginId || email || "").trim();
 
-
-        if (
-            !email ||
-            !password
-        ) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Email and password are required."
-            });
-
+        if (!["student", "admin", "volunteer"].includes(portal)) {
+            return res.status(400).json({ success: false, message: "Invalid sign-in portal." });
         }
 
+        if (!suppliedIdentifier || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Login ID/email and password are required."
+            });
+        }
 
-        const normalizedEmail =
-            String(email)
-                .trim()
-                .toLowerCase();
-
-
-        const user =
-            await User.findOne({
-                email:
-                    normalizedEmail
-            })
-                .select(
-                    "+password"
-                );
+        const normalizedIdentifier = suppliedIdentifier.toLowerCase();
+        const user = await User.findOne({
+            $or: [
+                { email: normalizedIdentifier },
+                { loginId: suppliedIdentifier.toUpperCase() }
+            ]
+        }).select("+password");
 
 
         if (!user) {
@@ -821,9 +809,18 @@ exports.login = async (
 
         }
 
+        if (user.role !== portal) {
+            return res.status(403).json({
+                success: false,
+                message: portal === "student"
+                    ? "Administrator and volunteer accounts must use their separate sign-in portals."
+                    : `These credentials do not belong to a ${portal} account.`
+            });
+        }
+
 
         if (
-            !user.isEmailVerified
+            user.role === "student" && !user.isEmailVerified
         ) {
 
             return res.status(403).json({
@@ -837,8 +834,7 @@ exports.login = async (
         }
 
 
-        const token =
-            createToken(user);
+        const token = createToken(user);
 
 
         return res.status(200).json({
@@ -871,6 +867,13 @@ exports.login = async (
 
     }
 
+};
+
+exports.getCurrentUser = (req, res) => {
+    return res.status(200).json({
+        success: true,
+        user: publicUser(req.user)
+    });
 };
 
 

@@ -1,0 +1,44 @@
+.dashboard-shell-admin { --admin-violet:#6557e8; --admin-indigo:#4f46e5; --admin-blue:#3988e8; }
+.dashboard-shell-admin .admin-dashboard-page { padding-bottom:48px; }
+.dashboard-shell-admin .admin-welcome { border:1px solid rgba(167,139,250,.24); background:radial-gradient(ellipse 42% 110% at 85% 5%,rgba(124,58,237,.44),transparent 70%),radial-gradient(ellipse 30% 100% at 60% 110%,rgba(59,130,246,.28),transparent 75%),linear-gradient(120deg,#11152b 0%,#1b1c46 55%,#22205c 100%); box-shadow:0 22px 48px rgba(49,46,129,.16),inset 0 1px 0 rgba(255,255,255,.08); }
+.dashboard-shell-admin .admin-welcome::before { top:-170px; right:12%; border-color:rgba(167,139,250,.36); box-shadow:0 0 0 27px rgba(129,140,248,.09),0 0 0 55px rgba(56,189,248,.055),0 0 72px rgba(124,58,237,.22); }
+.dashboard-shell-admin .admin-welcome::after { position:absolute; right:7%; bottom:-190px; width:360px; height:270px; border-radius:50%; background:rgba(99,102,241,.19); content:""; filter:blur(42px); pointer-events:none; }
+.dashboard-shell-admin .admin-welcome>div { position:relative; z-index:1; }
+.dashboard-shell-admin .admin-welcome .eyebrow { color:#c4b5fd; }
+.dashboard-shell-admin .admin-welcome h1 { color:#f8f7ff; }
+.dashboard-shell-admin .admin-welcome p:not(.eyebrow) { color:#c2c8e2; }
+.dashboard-shell-admin .admin-welcome .button { border:1px solid rgba(255,255,255,.3); color:#fff; background:linear-gradient(120deg,#7669f2,#5b50d9 55%,#4e62d6); box-shadow:0 9px 22px rgba(79,70,229,.34),inset 0 1px 0 rgba(255,255,255,.25); }
+.dashboard-shell-admin .admin-welcome .button:hover,.dashboard-shell-admin .admin-welcome .button:focus-visible { border-color:rgba(255,255,255,.5)!important; color:#fff!important; background:linear-gradient(120deg,#887bf8,#675de8 55%,#527de2)!important; box-shadow:0 13px 30px rgba(99,102,241,.42),inset 0 1px 0 rgba(255,255,255,.35)!important; }
+.dashboard-shell-admin .admin-metric { position:relative; overflow:hidden; border-color:#e3e5f4; border-radius:12px; background:linear-gradient(150deg,#fff 0%,#fcfcff 100%); box-shadow:0 7px 20px rgba(32,43,75,.045); transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease; }
+.dashboard-shell-admin .admin-metric::before { position:absolute; top:0; right:0; left:0; height:3px; background:linear-gradient(90deg,#7568ef,#9b8cf7 52%,#72b8f3); content:""; opacity:.75; }
+.dashboard-shell-admin .admin-metric:hover { transform:translateY(-3px); border-color:#c7c4fa; box-shadow:0 14px 28px rgba(79,70,229,.11); }
+.dashboard-shell-admin .admin-metric-icon { color:#5d50d3; background:linear-gradient(145deg,#f1efff,#e5e3ff); box-shadow:inset 0 1px 0 rgba(255,255,255,.9); }
+.dashboard-shell-admin .admin-metric:nth-child(2) .admin-metric-icon { color:#2878c8; background:linear-gradient(145deg,#e8f5ff,#d9edff); }
+.dashboard-shell-admin .admin-metric:nth-child(3) .admin-metric-icon { color:#5145ca; background:linear-gradient(145deg,#efedff,#dedaff); }
+.dashboard-shell-admin .admin-metric:nth-child(4) .admin-metric-icon { color:#6847c5; background:linear-gradient(145deg,#f4eaff,#e9dcff); }
+.dashboard-shell-admin .admin-metric:nth-child(5) .admin-metric-icon { color:#3571d0; background:linear-gradient(145deg,#ebf0ff,#dce5ff); }
+.dashboard-shell-admin .admin-metric:nth-child(6) .admin-metric-icon { color:#277bb5; background:linear-gradient(145deg,#e7f7ff,#d6efff); }
+.dashboard-shell-admin .admin-metric:nth-child(7) .admin-metric-icon { color:#7251c8; background:linear-gradient(145deg,#f3edff,#e6dcff); }
+.dashboard-shell-admin .admin-metric small { color:#75809a; }
+.dashboard-shell-admin .admin-metric strong { color:#202642; }
+.dashboard-shell-admin .admin-dashboard-lower .dashboard-panel { border-color:#e3e5f4; border-radius:12px; box-shadow:0 8px 24px rgba(32,43,75,.045); }
+.dashboard-shell-admin .panel-heading .eyebrow,.dashboard-shell-admin .admin-quick-panel>.eyebrow { color:#7167c7; }
+.dashboard-shell-admin .panel-heading h2,.dashboard-shell-admin .admin-quick-panel h2 { color:#202642; }
+.dashboard-shell-admin .panel-heading>a { color:#5b50d4; }
+.dashboard-shell-admin .admin-activity-list { border-color:#ececf6; }
+.dashboard-shell-admin .admin-activity-row { border-color:#ececf6; transition:background .18s ease; }
+.dashboard-shell-admin .admin-activity-row:hover { background:#f8f7ff; }
+.dashboard-shell-admin .activity-avatar { color:#5145c7; background:linear-gradient(145deg,#f0edff,#dfdcff); }
+.dashboard-shell-admin .activity-description strong { color:#28304a; }
+.dashboard-shell-admin .admin-quick-panel>a { border-color:#ececf6; color:#34405a; transition:background .18s ease,color .18s ease; }
+.dashboard-shell-admin .admin-quick-panel>a>span:first-child { color:#5b50d4; background:linear-gradient(145deg,#f2efff,#e5e2ff); }
+.dashboard-shell-admin .admin-quick-panel>a:nth-of-type(2)>span:first-child { color:#347dc7; background:linear-gradient(145deg,#eaf6ff,#dceeff); }
+.dashboard-shell-admin .admin-quick-panel>a:nth-of-type(3)>span:first-child { color:#704ec4; background:linear-gradient(145deg,#f4edff,#e8ddff); }
+.dashboard-shell-admin .admin-quick-panel>a:nth-of-type(4)>span:first-child { color:#376dc4; background:linear-gradient(145deg,#edf1ff,#dce5ff); }
+.dashboard-shell-admin .admin-quick-panel>a:hover { color:#5145c7; background:#f8f7ff; }
+:root[data-theme="dark"] .dashboard-shell-admin .admin-metric,:root[data-theme="dark"] .dashboard-shell-admin .admin-dashboard-lower .dashboard-panel { border-color:#303554; background:linear-gradient(150deg,#151b2c,#171d31); }
+:root[data-theme="dark"] .dashboard-shell-admin .admin-metric strong,:root[data-theme="dark"] .dashboard-shell-admin .panel-heading h2,:root[data-theme="dark"] .dashboard-shell-admin .admin-quick-panel h2 { color:#edf0ff; }
+:root[data-theme="dark"] .dashboard-shell-admin .admin-metric small,:root[data-theme="dark"] .dashboard-shell-admin .activity-date { color:#aab4cb; }
+:root[data-theme="dark"] .dashboard-shell-admin .admin-activity-row:hover,:root[data-theme="dark"] .dashboard-shell-admin .admin-quick-panel>a:hover { background:#20243d; }
+:root[data-theme="dark"] .dashboard-shell-admin .activity-description strong,:root[data-theme="dark"] .dashboard-shell-admin .admin-quick-panel>a { color:#d7dded; }
+@media(prefers-reduced-motion:reduce) { .dashboard-shell-admin .admin-metric,.dashboard-shell-admin .admin-activity-row,.dashboard-shell-admin .admin-quick-panel>a { transition:none; }.dashboard-shell-admin .admin-metric:hover { transform:none; } }

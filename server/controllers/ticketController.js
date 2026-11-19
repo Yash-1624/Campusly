@@ -3,6 +3,34 @@ const mongoose = require("mongoose");
 const Ticket = require("../models/Ticket");
 const Registration = require("../models/Registration");
 const Event = require("../models/Event");
+const { createTicket } = require("../services/ticketService");
+
+exports.getMyTickets = async (req, res, next) => {
+    try {
+        const confirmedRegistrations = await Registration.find({
+            student: req.user._id,
+            registrationStatus: "Confirmed",
+        }).select("_id");
+
+        // Backfill tickets for older confirmed registrations that never received one.
+        await Promise.all(confirmedRegistrations.map(async ({ _id }) => {
+            try {
+                await createTicket({ registrationId: _id });
+            } catch (ticketError) {
+                console.error("TICKET BACKFILL ERROR:", ticketError.message);
+            }
+        }));
+
+        const tickets = await Ticket.find({ student: req.user._id })
+            .populate("event", "name category date location")
+            .populate("registration", "registrationId registrationStatus")
+            .sort({ createdAt: -1 });
+
+        return res.json({ tickets });
+    } catch (error) {
+        return next(error);
+    }
+};
 
 
 // =========================================================
@@ -231,10 +259,19 @@ exports.scanTicket = async (
 
     try {
 
-        const {
-            ticketId,
-            eventId
-        } = req.body;
+        let { ticketId, eventId, qrPayload } = req.body;
+
+        // QR images contain a JSON payload with ticketId and display details.
+        if (!ticketId && qrPayload) {
+            try {
+                const decoded = typeof qrPayload === "string" ? JSON.parse(qrPayload) : qrPayload;
+                ticketId = decoded.ticketId;
+                eventId = eventId || decoded.eventId;
+            } catch {
+                // Allow legacy QR codes that contain the ticket ID as plain text.
+                ticketId = String(qrPayload).trim();
+            }
+        }
 
 
         // -------------------------------------------------
@@ -298,6 +335,14 @@ exports.scanTicket = async (
         }
 
 
+
+        // Volunteers can scan only tickets for their assigned event(s).
+        if (req.user.role === "volunteer") {
+            const assignedEvents = (req.user.assignedEvents || []).map((id) => String(id._id || id));
+            if (!assignedEvents.includes(String(existingTicket.event))) {
+                return res.status(403).json({ message: "This volunteer is not assigned to the event for this ticket." });
+            }
+        }
 
         // =================================================
         // EVENT VALIDATION
@@ -403,6 +448,10 @@ exports.scanTicket = async (
                 .populate(
                     "registration",
                     "registrationId registrationStatus"
+                )
+                .populate(
+                    "scannedBy",
+                    "fullName loginId collegePid departmentName role"
                 );
 
 
@@ -570,9 +619,9 @@ exports.resetTicketEntry = async (
 
 
 module.exports = {
+    getMyTickets: exports.getMyTickets,
     getMyTicket: exports.getMyTicket,
     getTicketById: exports.getTicketById,
     scanTicket: exports.scanTicket,
-    resetTicketEntry: exports.resetTicketEntry,
-    scanTicket: exports.scanTicket
+    resetTicketEntry: exports.resetTicketEntry
 };

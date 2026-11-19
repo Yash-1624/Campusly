@@ -1,6 +1,45 @@
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
+
+function formatDateTimeLocal(value) {
+
+    if (!value) {
+        return "";
+    }
+
+    const date =
+        new Date(value);
+
+    if (isNaN(date.getTime())) {
+        return "";
+    }
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(2, "0");
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(2, "0");
+
+    const hours =
+        String(
+            date.getHours()
+        ).padStart(2, "0");
+
+    const minutes =
+        String(
+            date.getMinutes()
+        ).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
 const EditEvent = () => {
     const { id } = useParams();
@@ -10,6 +49,9 @@ const EditEvent = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [imageUrl, setImageUrl] = useState("");
+    const [removeImage, setRemoveImage] = useState(false);
+    const [imageError, setImageError] = useState("");
 
     const [formData, setFormData] = useState({
         name: "",
@@ -39,12 +81,7 @@ const EditEvent = () => {
     // LOAD EVENT
     // ========================================
 
-    useEffect(() => {
-        fetchEvent();
-    }, [id]);
-
-
-    const fetchEvent = async () => {
+    const fetchEvent = useCallback(async () => {
         try {
 
             setLoading(true);
@@ -62,6 +99,8 @@ const EditEvent = () => {
             }
 
 
+            setImageUrl(event.imageUrl || "");
+            setRemoveImage(false);
             setFormData({
 
                 name:
@@ -138,51 +177,31 @@ const EditEvent = () => {
             setLoading(false);
 
         }
-    };
+    }, [id]);
 
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchEvent();
+    }, [fetchEvent]);
+
+
+    const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
+        setImageError("");
+        if (!file) return;
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { setImageError("Choose a JPG, PNG, or WebP image."); e.target.value = ""; return; }
+        if (file.size > 2 * 1024 * 1024) { setImageError("Image must be 2 MB or smaller."); e.target.value = ""; return; }
+        const reader = new FileReader();
+        reader.onload = () => { setImageUrl(String(reader.result || "")); setRemoveImage(false); };
+        reader.onerror = () => setImageError("Could not read the selected image.");
+        reader.readAsDataURL(file);
+    };
 
     // ========================================
     // FORMAT DATE FOR DATETIME-LOCAL
     // ========================================
 
-    const formatDateTimeLocal = (value) => {
 
-        if (!value) {
-            return "";
-        }
-
-        const date =
-            new Date(value);
-
-        if (isNaN(date.getTime())) {
-            return "";
-        }
-
-        const year =
-            date.getFullYear();
-
-        const month =
-            String(
-                date.getMonth() + 1
-            ).padStart(2, "0");
-
-        const day =
-            String(
-                date.getDate()
-            ).padStart(2, "0");
-
-        const hours =
-            String(
-                date.getHours()
-            ).padStart(2, "0");
-
-        const minutes =
-            String(
-                date.getMinutes()
-            ).padStart(2, "0");
-
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
 
 
     // ========================================
@@ -425,7 +444,10 @@ const EditEvent = () => {
                     ) || 0,
 
                 status:
-                    formData.status
+                    formData.status,
+
+                imageUrl,
+                removeImage
 
             };
 
@@ -456,7 +478,7 @@ const EditEvent = () => {
             setTimeout(() => {
 
                 navigate(
-                    "/admin/events"
+                    "/control-center/events"
                 );
 
             }, 1000);
@@ -550,6 +572,15 @@ const EditEvent = () => {
                 <form
                     onSubmit={handleSubmit}
                 >
+                    <div className="form-group event-image-field">
+                        <label htmlFor="edit-event-image">Event Poster / Image</label>
+                        {imageUrl && !removeImage && <img className="event-image-preview" src={imageUrl} alt="Current event poster" />}
+                        <input id="edit-event-image" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} />
+                        <small className="hint">Choose a new image to replace the current one. JPG, PNG or WebP · maximum 2 MB.</small>
+                        {imageError && <div className="alert error">{imageError}</div>}
+                        {imageUrl && !removeImage && <button type="button" className="button secondary" onClick={() => { setImageUrl(""); setRemoveImage(true); }}>Reset / Remove image</button>}
+                        {removeImage && <p className="hint">The event image will be removed when you save.</p>}
+                    </div>
 
 
                     {/* ========================================

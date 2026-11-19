@@ -18,6 +18,12 @@ const eventSchema = new mongoose.Schema(
             trim: true
         },
 
+        // Optional event poster stored as a data URL (max 2 MB upload).
+        imageUrl: {
+            type: String,
+            default: ""
+        },
+
         // Custom category
         // No enum because admin can create
         // any category.

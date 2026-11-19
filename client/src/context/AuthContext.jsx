@@ -2,77 +2,62 @@ import {
     createContext,
     useContext,
     useEffect,
-    useState
+    useState,
 } from "react";
 
 import api from "../services/api";
 
-const AuthContext =
-    createContext(null);
+const AuthContext = createContext(null);
+const getStoredToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
 
-export function AuthProvider({
-    children
-}) {
-    const [
-        user,
-        setUser
-    ] = useState(null);
-
-    const [
-        loading,
-        setLoading
-    ] = useState(true);
+export function AuthProvider({ children }) {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(() => Boolean(getStoredToken()));
 
     const logout = () => {
-        localStorage.removeItem(
-            "token"
-        );
-
+        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         setUser(null);
     };
 
-    const login = async (
-        email,
-        password
-    ) => {
-        const { data } =
-            await api.post(
-                "/auth/login",
-                {
-                    email,
-                    password
-                }
-            );
+    const login = async (email, password, rememberMe = true, portal = "student") => {
+        const { data } = await api.post("/auth/login", {
+            email,
+            password,
+            portal,
+        });
 
-        localStorage.setItem(
-            "token",
-            data.token
-        );
+        if (!data.token) {
+            throw new Error("Login response did not contain a token.");
+        }
 
-        setUser(
-            data.user
-        );
+        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
+        (rememberMe ? localStorage : sessionStorage).setItem("token", data.token);
+        sessionStorage.removeItem("remember-me-after-verification");
+
+        const loggedInUser = data.user;
+
+        if (!loggedInUser) {
+            throw new Error("Login response did not contain user information.");
+        }
+
+        setUser(loggedInUser);
 
         return data;
     };
 
     useEffect(() => {
-        const token =
-            localStorage.getItem(
-                "token"
-            );
+        const token = getStoredToken();
 
         if (!token) {
-            setLoading(false);
             return;
         }
 
         api
             .get("/auth/me")
             .then(({ data }) => {
-                setUser(
-                    data.user
-                );
+                setUser(data.user);
             })
             .catch(() => {
                 logout();
@@ -89,7 +74,7 @@ export function AuthProvider({
                 setUser,
                 loading,
                 login,
-                logout
+                logout,
             }}
         >
             {children}
@@ -97,8 +82,5 @@ export function AuthProvider({
     );
 }
 
-export const useAuth =
-    () =>
-        useContext(
-            AuthContext
-        );
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAuth = () => useContext(AuthContext);

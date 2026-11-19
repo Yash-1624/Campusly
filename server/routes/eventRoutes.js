@@ -42,7 +42,6 @@ router.get(
 
 router.get(
     "/",
-    protect,
     getEvents
 );
 

@@ -1,105 +1,133 @@
-import {
-    useState
-} from "react";
-
-import {
-    Link,
-    useNavigate
-} from "react-router-dom";
-
-import api
-    from "../services/api";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../services/api";
 
 export default function ForgotPassword() {
+    const navigate = useNavigate();
 
-    const [
-        email,
-        setEmail
-    ] = useState("");
+    const [email, setEmail] = useState("");
+    const [message, setMessage] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const [
-        error,
-        setError
-    ] = useState("");
+    const submit = async (e) => {
+        e.preventDefault();
 
-    const navigate =
-        useNavigate();
+        const normalizedEmail = email.trim().toLowerCase();
 
-    const submit =
-        async (e) => {
+        if (!normalizedEmail) {
+            setError("Please enter your registered email address.");
+            return;
+        }
 
-            e.preventDefault();
+        // Basic email format check
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(normalizedEmail)) {
+            setError("Please enter a valid email address.");
+            return;
+        }
 
-            try {
+        setError("");
+        setMessage("");
+        setLoading(true);
 
-                await api.post(
-                    "/auth/forgot-password",
+        try {
+            const { data } = await api.post(
+                "/auth/forgot-password",
+                { email: normalizedEmail },
+                { timeout: 20000 }
+            );
+
+            console.log("Forgot password response:", data);
+
+            const successMessage =
+                data.message || "Password reset OTP sent successfully. Please check your email.";
+
+            setMessage(successMessage);
+
+            // Navigate after short delay so user can see the success message
+            setTimeout(() => {
+                navigate(
+                    `/reset-password?email=${encodeURIComponent(normalizedEmail)}`,
                     {
-                        email
+                        state: {
+                            message: successMessage,
+                        },
                     }
                 );
+            }, 1200);
+        } catch (err) {
+            console.error(
+                "Forgot password error:",
+                err.response?.data || err.message
+            );
 
-                navigate(
-                    `/reset-password?email=${encodeURIComponent(
-                        email
-                    )}`
-                );
-
-            } catch (err) {
-
+            if (err.code === "ECONNABORTED") {
                 setError(
-                    err.response
-                        ?.data
-                        ?.message ||
-                    "Could not send OTP."
+                    "The request timed out. Please check the backend email service and try again."
+                );
+            } else {
+                setError(
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Unable to send reset OTP. Please try again."
                 );
             }
-        };
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="auth-page">
+            <form className="form-card" onSubmit={submit} noValidate>
+                <h1>Forgot Password</h1>
 
-            <form
-                className="form-card"
-                onSubmit={submit}
-            >
+                <p>
+                    Enter your registered email address.
+                    We will send you a password reset OTP.
+                </p>
 
-                <h1>
-                    Forgot Password
-                </h1>
+                {message && (
+                    <div className="alert success" role="status">
+                        {message}
+                    </div>
+                )}
 
                 {error && (
-                    <div className="alert error">
+                    <div className="alert error" role="alert">
                         {error}
                     </div>
                 )}
 
                 <label>
-                    Email
-
+                    Email Address
                     <input
                         type="email"
+                        name="email"
                         required
+                        autoComplete="email"
+                        autoFocus
                         value={email}
-                        onChange={
-                            (e) =>
-                                setEmail(
-                                    e.target.value
-                                )
-                        }
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your registered email"
+                        disabled={loading}
                     />
                 </label>
 
-                <button className="button primary">
-                    Send OTP
+                <button
+                    type="submit"
+                    className="button primary"
+                    disabled={loading || !email.trim()}
+                >
+                    {loading ? "Sending..." : "Send Reset OTP"}
                 </button>
 
-                <Link to="/login">
-                    Back to Login
-                </Link>
-
+                <p>
+                    Remember your password?{" "}
+                    <Link to="/login">Login</Link>
+                </p>
             </form>
-
         </div>
     );
 }

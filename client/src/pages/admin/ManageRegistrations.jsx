@@ -95,6 +95,8 @@ export default function ManageRegistrations() {
 
             <input
                 className="search"
+                type="search"
+                aria-label="Search registrations"
                 placeholder="Search registrations..."
                 value={search}
                 onChange={

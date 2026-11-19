@@ -332,7 +332,7 @@ export default function RegistrationDetails() {
                     </div>
 
                     <Link
-                        to="/admin/registrations"
+                        to="/control-center/registrations"
                         className="button secondary"
                     >
                         Back to Registrations

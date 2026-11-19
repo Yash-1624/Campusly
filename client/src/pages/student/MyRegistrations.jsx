@@ -38,14 +38,20 @@ export default function MyRegistrations() {
         return <Loading />;
     }
 
+    const upcomingCount = registrations.filter((registration) => registration.event && new Date(registration.event.date) >= new Date()).length;
+    const confirmedCount = registrations.filter((registration) => registration.registrationStatus === "Confirmed").length;
+
     return (
-        <main className="container">
+        <main className="container student-registrations-page">
+            <header className="student-listing-hero">
+                <div><p className="eyebrow">YOUR CAMPUS PLANS</p><h1>My registrations</h1><p>Every event you signed up for, together in one place.</p></div>
+                <div className="student-listing-orbit" aria-hidden="true">✦</div>
+                <div className="student-listing-stats"><div><strong>{registrations.length}</strong><span>All bookings</span></div><div><strong>{upcomingCount}</strong><span>Coming up</span></div><div><strong>{confirmedCount}</strong><span>Confirmed</span></div></div>
+            </header>
 
-            <h1>
-                My Registrations
-            </h1>
-
-            <div className="table-wrap">
+            <section className="student-registrations-table-card">
+                <div className="student-registrations-table-heading"><div><p className="eyebrow">YOUR EVENT HISTORY</p><h2>Registrations</h2></div><span>{registrations.length} {registrations.length === 1 ? "event" : "events"}</span></div>
+                <div className="table-wrap">
 
                 <table>
 
@@ -183,11 +189,14 @@ export default function MyRegistrations() {
                             )
                         )}
 
+                        {!registrations.length && <tr><td className="student-registrations-empty" colSpan="9"><span>✦</span><strong>No registrations yet</strong><p>Find an event that sounds like you and save your spot.</p><Link className="button primary" to="/student/events">Explore events ↗</Link></td></tr>}
+
                     </tbody>
 
                 </table>
 
-            </div>
+                </div>
+            </section>
 
         </main>
     );

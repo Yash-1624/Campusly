@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
 
 const ManageCategories = () => {
@@ -11,11 +11,7 @@ const ManageCategories = () => {
     // LOAD CATEGORIES
     // ========================================
 
-    useEffect(() => {
-        fetchCategories();
-    }, []);
-
-    const fetchCategories = async () => {
+    const fetchCategories = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
@@ -62,7 +58,12 @@ const ManageCategories = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchCategories();
+    }, [fetchCategories]);
 
 
     // ========================================

@@ -1,0 +1,17 @@
+.privacy-panel { position: fixed; z-index: 1500; right: 20px; bottom: 20px; left: 20px; display: flex; max-width: 1000px; align-items: center; justify-content: space-between; gap: 22px; margin-inline: auto; padding: 18px 20px; border: 1px solid rgba(112,123,150,.24); border-radius: 16px; color: #263047; background: rgba(255,255,255,.97); box-shadow: 0 16px 48px rgba(20,30,60,.2); backdrop-filter: blur(16px); }
+.privacy-copy { max-width: 580px; }
+.privacy-copy strong { font-size: 15px; }
+.privacy-copy p { margin: 5px 0 0; color: #687387; font-size: 13px; line-height: 1.5; }
+.privacy-copy small { display: block; margin-top: 7px; color: #5a50c8; font-size: 12px; }
+.privacy-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.privacy-actions button,.privacy-reopen { min-height: 38px; padding: 8px 12px; border: 1px solid #d8ddeb; border-radius: 9px; color: #39445c; background: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: .18s ease; }
+.privacy-actions button:hover,.privacy-reopen:hover { border-color: #7668db; color: #5147ba; background: #f5f3ff; }
+.privacy-actions .privacy-primary { border-color: #5b50c7; color: #fff; background: #5b50c7; }
+.privacy-actions .privacy-primary:hover { border-color: #453aa9; background: #453aa9; }
+.privacy-reopen { position: fixed; z-index: 1400; bottom: 12px; left: 12px; min-height: 32px; padding: 6px 10px; opacity: .85; box-shadow: 0 3px 12px rgba(20,30,60,.12); }
+.privacy-close { position: fixed; z-index: 1501; right: 22px; bottom: 148px; display: none; width: 34px; height: 34px; border: 1px solid #d8ddeb; border-radius: 50%; background: white; font-size: 22px; cursor: pointer; }
+:root[data-theme="dark"] .privacy-panel { border-color: #35425c; color: #edf2fa; background: rgba(19,28,46,.97); }
+:root[data-theme="dark"] .privacy-copy p { color: #b0bdd0; }
+:root[data-theme="dark"] .privacy-actions button,:root[data-theme="dark"] .privacy-reopen { border-color: #46536d; color: #e5eafb; background: #1b2740; }
+:root[data-theme="dark"] .privacy-actions .privacy-primary { border-color: #7668db; background: #5b50c7; }
+@media(max-width:700px) { .privacy-panel { right: 10px; bottom: 10px; left: 10px; align-items: stretch; flex-direction: column; gap: 12px; padding: 16px; }.privacy-actions { display: grid; grid-template-columns: 1fr 1fr; }.privacy-actions .privacy-primary { grid-column: 1 / -1; }.privacy-reopen { bottom: 8px; left: 8px; }.privacy-close { display: block; right: 14px; bottom: 210px; } }

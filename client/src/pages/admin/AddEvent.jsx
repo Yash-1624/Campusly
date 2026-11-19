@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
+import "./AddEvent.css";
 
 const initialForm = {
     name: "",
@@ -23,6 +24,28 @@ export default function AddEvent() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [imageUrl, setImageUrl] = useState("");
+    const [imageError, setImageError] = useState("");
+
+    const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
+        setImageError("");
+        if (!file) return;
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+            setImageError("Choose a JPG, PNG, or WebP image.");
+            e.target.value = "";
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            setImageError("Image must be 2 MB or smaller.");
+            e.target.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => setImageUrl(String(reader.result || ""));
+        reader.onerror = () => setImageError("Could not read the selected image.");
+        reader.readAsDataURL(file);
+    };
 
     const navigate = useNavigate();
 
@@ -120,7 +143,6 @@ export default function AddEvent() {
         // Date validation
         // ------------------------------------------
 
-        const eventDate = new Date(form.date);
         const startDate = new Date(
             form.registrationStartDate
         );
@@ -180,7 +202,8 @@ export default function AddEvent() {
 
                 status: form.status,
 
-                fee: Number(form.fee) || 0
+                fee: Number(form.fee) || 0,
+                imageUrl
             });
 
             console.log(
@@ -197,7 +220,7 @@ export default function AddEvent() {
             // ------------------------------------------
 
             setTimeout(() => {
-                navigate("/admin/events");
+                navigate("/control-center/events");
             }, 700);
 
         } catch (err) {
@@ -227,14 +250,14 @@ export default function AddEvent() {
     // ==========================================
 
     return (
-        <main className="container narrow">
+        <main className="container narrow add-event-page">
 
             <form
                 className="form-card"
                 onSubmit={submit}
             >
 
-                <h1>Add Event</h1>
+                <div className="add-form-heading"><span className="add-event-eyebrow">LET’S GET IT ON THE CALENDAR</span><h2>Add your event</h2><p>Start with the essentials. You can update these details anytime.</p></div>
 
                 {/* ==================================
             ERROR MESSAGE
@@ -296,6 +319,14 @@ export default function AddEvent() {
                         }
                     />
                 </label>
+
+                <div className="form-group event-image-field">
+                    <label htmlFor="event-image">Event Poster / Image (optional)</label>
+                    <input id="event-image" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} />
+                    <small className="hint">JPG, PNG or WebP · maximum 2 MB.</small>
+                    {imageError && <div className="alert error">{imageError}</div>}
+                    {imageUrl && <div className="event-image-preview-wrap"><img className="event-image-preview" src={imageUrl} alt="Event poster preview" /><button type="button" className="button secondary" onClick={() => { setImageUrl(""); const input = document.getElementById("event-image"); if (input) input.value = ""; }}>Remove image</button></div>}
+                </div>
 
                 {/* ==================================
             CATEGORY

@@ -4,11 +4,11 @@ const {
     protect
 } = require("../middleware/authMiddleware");
 
-const {
-    adminOnly
-} = require("../middleware/adminMiddleware");
+const { staffOnly } = require("../middleware/staffMiddleware");
+const { adminOnly } = require("../middleware/adminMiddleware");
 
 const {
+    getMyTickets,
     getMyTicket,
     getTicketById,
     scanTicket,
@@ -20,6 +20,8 @@ const {
 // SPECIFIC ROUTES FIRST
 // =====================================================
 
+router.get("/my", protect, getMyTickets);
+
 router.get(
     "/registration/:registrationId",
     protect,
@@ -29,7 +31,7 @@ router.get(
 router.post(
     "/scan",
     protect,
-    adminOnly,
+    staffOnly,
     scanTicket
 );
 

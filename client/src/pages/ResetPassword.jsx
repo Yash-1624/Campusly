@@ -1,70 +1,120 @@
-import {
-    useState
-} from "react";
-
-import {
-    Link,
-    useNavigate,
-    useSearchParams
-} from "react-router-dom";
-
-import api
-    from "../services/api";
+import { useState } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import api from "../services/api";
 
 export default function ResetPassword() {
 
-    const [
-        params
-    ] = useSearchParams();
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
 
-    const navigate =
-        useNavigate();
+    const emailFromUrl =
+        searchParams.get("email") || "";
 
-    const [
-        form,
-        setForm
-    ] = useState({
-        email:
-            params.get(
-                "email"
-            ) || "",
-
+    const [form, setForm] = useState({
         otp: "",
-
-        newPassword: ""
+        newPassword: "",
+        confirmPassword: ""
     });
 
-    const [
-        error,
-        setError
-    ] = useState("");
+    const [message, setMessage] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const submit =
-        async (e) => {
+    const change = (e) => {
 
-            e.preventDefault();
+        const {
+            name,
+            value
+        } = e.target;
 
-            try {
+        setForm({
+            ...form,
+            [name]: value
+        });
+    };
 
-                await api.post(
-                    "/auth/reset-password",
-                    form
-                );
+    const submit = async (e) => {
 
-                navigate(
-                    "/login"
-                );
+        e.preventDefault();
 
-            } catch (err) {
+        setError("");
+        setMessage("");
 
-                setError(
-                    err.response
-                        ?.data
-                        ?.message ||
-                    "Password reset failed."
-                );
-            }
-        };
+        if (!emailFromUrl) {
+
+            setError(
+                "Email address is missing. Please request a new reset OTP."
+            );
+
+            return;
+        }
+
+        if (
+            form.newPassword !==
+            form.confirmPassword
+        ) {
+
+            setError(
+                "Passwords do not match."
+            );
+
+            return;
+        }
+
+        if (
+            form.newPassword.length < 6
+        ) {
+
+            setError(
+                "Password must be at least 6 characters long."
+            );
+
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+
+            const { data } = await api.post(
+                "/auth/reset-password",
+                {
+                    email: emailFromUrl,
+                    otp: form.otp,
+                    newPassword: form.newPassword,
+                    confirmPassword: form.confirmPassword
+                }
+            );
+
+            setMessage(
+                data.message ||
+                "Password reset successfully."
+            );
+
+            setTimeout(() => {
+
+                navigate("/login");
+
+            }, 1500);
+
+        } catch (err) {
+
+            console.error(
+                "Reset password error:",
+                err
+            );
+
+            setError(
+                err.response?.data?.message ||
+                "Unable to reset password."
+            );
+
+        } finally {
+
+            setLoading(false);
+
+        }
+    };
 
     return (
         <div className="auth-page">
@@ -78,6 +128,20 @@ export default function ResetPassword() {
                     Reset Password
                 </h1>
 
+                <p>
+                    Enter the OTP sent to:
+                </p>
+
+                <strong>
+                    {emailFromUrl}
+                </strong>
+
+                {message && (
+                    <div className="alert success">
+                        {message}
+                    </div>
+                )}
+
                 {error && (
                     <div className="alert error">
                         {error}
@@ -85,42 +149,16 @@ export default function ResetPassword() {
                 )}
 
                 <label>
-                    Email
-
-                    <input
-                        type="email"
-                        required
-                        value={
-                            form.email
-                        }
-                        onChange={
-                            (e) =>
-                                setForm({
-                                    ...form,
-                                    email:
-                                        e.target.value
-                                })
-                        }
-                    />
-                </label>
-
-                <label>
                     OTP
 
                     <input
+                        type="text"
+                        name="otp"
                         required
                         maxLength="6"
-                        value={
-                            form.otp
-                        }
-                        onChange={
-                            (e) =>
-                                setForm({
-                                    ...form,
-                                    otp:
-                                        e.target.value
-                                })
-                        }
+                        value={form.otp}
+                        onChange={change}
+                        placeholder="Enter 6-digit OTP"
                     />
                 </label>
 
@@ -129,29 +167,46 @@ export default function ResetPassword() {
 
                     <input
                         type="password"
-                        minLength="6"
+                        name="newPassword"
                         required
-                        value={
-                            form.newPassword
-                        }
-                        onChange={
-                            (e) =>
-                                setForm({
-                                    ...form,
-                                    newPassword:
-                                        e.target.value
-                                })
-                        }
+                        minLength="6"
+                        value={form.newPassword}
+                        onChange={change}
+                        placeholder="Enter new password"
                     />
                 </label>
 
-                <button className="button primary">
-                    Reset Password
+                <label>
+                    Confirm Password
+
+                    <input
+                        type="password"
+                        name="confirmPassword"
+                        required
+                        minLength="6"
+                        value={form.confirmPassword}
+                        onChange={change}
+                        placeholder="Confirm new password"
+                    />
+                </label>
+
+                <button
+                    type="submit"
+                    className="button primary"
+                    disabled={loading}
+                >
+                    {loading
+                        ? "Resetting..."
+                        : "Reset Password"}
                 </button>
 
-                <Link to="/login">
-                    Back to Login
-                </Link>
+                <p>
+                    Remember your password?{" "}
+
+                    <Link to="/login">
+                        Login
+                    </Link>
+                </p>
 
             </form>
 

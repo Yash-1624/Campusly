@@ -621,3 +621,172 @@ exports.getAllRegistrations = async (
     }
 
 };
+
+
+/**
+ * ADMIN: Add an existing student to an event.
+ * Payment stays pending; this function does not mark
+ * payment as successful or create a paid ticket.
+ */
+exports.adminAddRegistration = async (req, res, next) => {
+    try {
+        const mongoose = require("mongoose");
+        const User = require("../models/User");
+
+        const {
+            studentId,
+            eventId,
+            participationType = "Individual",
+            teamName = "",
+            numberOfMembers = 1
+        } = req.body;
+
+        // Validate IDs
+        if (
+            !mongoose.Types.ObjectId.isValid(studentId) ||
+            !mongoose.Types.ObjectId.isValid(eventId)
+        ) {
+            return res.status(400).json({
+                message: "Select a valid student and event."
+            });
+        }
+
+        // Find student and event
+        const [student, event] = await Promise.all([
+            User.findOne({
+                _id: studentId,
+                role: "student"
+            }),
+            Event.findById(eventId)
+        ]);
+
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found."
+            });
+        }
+
+        if (!event) {
+            return res.status(404).json({
+                message: "Event not found."
+            });
+        }
+
+        if (!student.collegePid) {
+            return res.status(400).json({
+                message:
+                    "Add a College PID to this student's profile before registering."
+            });
+        }
+
+        // Prevent duplicate registrations
+        const duplicate = await Registration.findOne({
+            student: student._id,
+            event: event._id
+        });
+
+        if (duplicate) {
+            return res.status(409).json({
+                message:
+                    "This student is already registered for this event.",
+                registrationId: duplicate.registrationId
+            });
+        }
+
+        // Validate participation type
+        if (!["Individual", "Team"].includes(participationType)) {
+            return res.status(400).json({
+                message: "Invalid participation type."
+            });
+        }
+
+        const memberCount = Number(numberOfMembers);
+
+        if (participationType === "Team") {
+            if (
+                !event.participationType?.team ||
+                !String(teamName).trim()
+            ) {
+                return res.status(400).json({
+                    message:
+                        "Team participation must be enabled and a team name is required."
+                });
+            }
+
+            if (
+                !Number.isInteger(memberCount) ||
+                memberCount < event.teamSettings.minMembers ||
+                memberCount > event.teamSettings.maxMembers
+            ) {
+                return res.status(400).json({
+                    message:
+                        `Team members must be between ${event.teamSettings.minMembers} and ${event.teamSettings.maxMembers}.`
+                });
+            }
+        } else if (!event.participationType?.individual) {
+            return res.status(400).json({
+                message: "Individual participation is not allowed."
+            });
+        }
+
+        // Create registration using database profile details
+        const registration = await Registration.create({
+            registrationId: generateRegistrationId(),
+
+            student: student._id,
+            event: event._id,
+
+            studentInformation: {
+                fullName: student.fullName,
+                collegePid: student.collegePid,
+                collegeName: student.collegeName,
+                yearSemester: student.yearSemester
+            },
+
+            contactInformation: {
+                mobileNumber: student.mobileNumber,
+                email: student.email
+            },
+
+            participation: {
+                type: participationType,
+                teamName:
+                    participationType === "Team"
+                        ? String(teamName).trim()
+                        : "",
+                numberOfMembers:
+                    participationType === "Team"
+                        ? memberCount
+                        : 1
+            },
+
+            confirmations: {
+                informationCorrect: true,
+                agreedToRules: true
+            },
+
+            payment: {
+                status: "Pending",
+                paymentId: null
+            },
+
+            registrationStatus: "Pending Payment"
+        });
+
+        return res.status(201).json({
+            success: true,
+            message:
+                "Student added to the event. Payment is pending.",
+            registration
+        });
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({
+                message:
+                    "This student is already registered for this event."
+            });
+        }
+
+        next(error);
+    }
+};

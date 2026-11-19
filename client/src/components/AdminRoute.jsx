@@ -1,44 +1,18 @@
-import {
-    Navigate,
-    Outlet
-} from "react-router-dom";
-
-import {
-    useAuth
-} from "../context/AuthContext";
-
-import Loading
-    from "./Loading";
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import Loading from "./Loading";
 
 export default function AdminRoute() {
-    const {
-        user,
-        loading
-    } = useAuth();
+    const { user, loading } = useAuth();
 
-    if (loading) {
-        return <Loading />;
-    }
+    if (loading) return <Loading />;
 
     if (!user) {
-        return (
-            <Navigate
-                to="/login"
-                replace
-            />
-        );
+        return <Navigate to="/control-center" replace />;
     }
 
-    if (
-        user.role !==
-        "admin"
-    ) {
-        return (
-            <Navigate
-                to="/student"
-                replace
-            />
-        );
+    if (user.role !== "admin") {
+        return <Navigate to={user.role === "volunteer" ? "/volunteer/dashboard" : "/student"} replace />;
     }
 
     return <Outlet />;
