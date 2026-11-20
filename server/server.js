@@ -9,58 +9,59 @@ const cors = require("cors");
 
 const connectDB = require("./config/db");
 
+const app = express();
+
 // ========================================
-// CREATE EXPRESS APP
+// CORS CONFIGURATION
 // ========================================
 
-const app = express();
+const allowedOrigins = (
+    process.env.CLIENT_URL || "http://localhost:5173"
+)
+    .split(",")
+    .map((url) => url.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+
+app.use(
+    cors({
+        origin: (origin, callback) => {
+            // Requests without an Origin header don't need CORS permission
+            if (!origin) {
+                return callback(null, false);
+            }
+
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, origin);
+            }
+
+            console.log("CORS blocked origin:", origin);
+            return callback(new Error("Not allowed by CORS"));
+        },
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"]
+    })
+);
 
 // ========================================
 // MIDDLEWARE
 // ========================================
 
-app.use(
-    cors({
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
-        credentials: true
-    })
-);
-
-// Parse JSON request body
 app.use(express.json({ limit: "5mb" }));
 
 // ========================================
 // ROUTES
 // ========================================
 
-// Analytics
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
-
-// Authentication
 app.use("/api/auth", require("./routes/authRoutes"));
-
-// Student Profile
 app.use("/api/profile", require("./routes/profileRoutes"));
-
-// Events
 app.use("/api/events", require("./routes/eventRoutes"));
-
-// Event Categories
 app.use("/api/categories", require("./routes/categoryRoutes"));
-
-// Event Registrations
 app.use("/api/registrations", require("./routes/registrationRoutes"));
-
-// Payments / Razorpay
 app.use("/api/payments", require("./routes/paymentRoutes"));
-
-// Admin
 app.use("/api/admin", require("./routes/adminRoutes"));
-
-// Tickets / QR Scanner
 app.use("/api/tickets", require("./routes/ticketRoutes"));
-
-// Volunteer
 app.use("/api/volunteer", require("./routes/volunteerRoutes"));
 
 // ========================================
@@ -90,7 +91,7 @@ app.use((req, res) => {
 // ========================================
 
 app.use((err, req, res, next) => {
-    console.error("Server Error:", err);
+    console.error("Server Error:", err.message);
 
     res.status(err.status || 500).json({
         success: false,
@@ -111,10 +112,7 @@ const startServer = async () => {
         app.listen(PORT, "0.0.0.0", () => {
             console.log(`Server running on port ${PORT}`);
 
-            console.log(
-                `Client URL: ${process.env.CLIENT_URL || "http://localhost:5173"
-                }`
-            );
+            console.log("Allowed frontend origins:", allowedOrigins);
 
             console.log(
                 `Razorpay Key ID loaded: ${process.env.RAZORPAY_KEY_ID ? "YES" : "NO"
@@ -127,11 +125,7 @@ const startServer = async () => {
             );
         });
     } catch (error) {
-        console.error(
-            "Server startup failed:",
-            error.message
-        );
-
+        console.error("Server startup failed:", error.message);
         process.exit(1);
     }
 };
