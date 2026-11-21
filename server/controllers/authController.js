@@ -16,6 +16,12 @@ const {
 // =====================================================
 
 const createToken = (user) => {
+    const sessionLength = {
+        student: "1h",
+        admin: "2h",
+        volunteer: "3h"
+    }[user.role] || "1h";
+
     return jwt.sign(
         {
             id: user._id,
@@ -23,7 +29,7 @@ const createToken = (user) => {
         },
         process.env.JWT_SECRET,
         {
-            expiresIn: "7d"
+            expiresIn: sessionLength
         }
     );
 };

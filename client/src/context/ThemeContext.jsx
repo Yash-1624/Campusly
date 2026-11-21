@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useLayoutEffect, useState } from "react";
 
 const ThemeContext = createContext(null);
 
@@ -18,7 +18,7 @@ export function ThemeProvider({ children }) {
         return "light";
     });
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         document.documentElement.setAttribute("data-theme", theme);
 
         try {

@@ -21,7 +21,7 @@ const isRegistrationOpen = (event) => {
             event.status
         ) &&
         now >= new Date(event.registrationStartDate) &&
-        now <= new Date(event.registrationEndDate)
+        now < new Date(event.registrationEndDate)
     );
 
 };
@@ -525,15 +525,9 @@ exports.getRegistrationById = async (
     try {
 
         const registration =
-            await Registration.findOne({
-
-                _id:
-                    req.params.id,
-
-                student:
-                    req.user._id
-
-            })
+            await Registration.findOne(req.user.role === "admin"
+                ? { _id: req.params.id }
+                : { _id: req.params.id, student: req.user._id })
 
                 .populate("event")
 
@@ -789,4 +783,31 @@ exports.adminAddRegistration = async (req, res, next) => {
 
         next(error);
     }
+};
+
+
+// Update participation details while keeping student ownership and payment state protected.
+exports.updateRegistration = async (req, res, next) => {
+    try {
+        const registration = await Registration.findById(req.params.id).populate("event");
+        if (!registration) return res.status(404).json({ message: "Registration not found." });
+        const isAdmin = req.user.role === "admin";
+        if (!isAdmin && String(registration.student) !== String(req.user._id)) return res.status(404).json({ message: "Registration not found." });
+        if (!isAdmin && registration.registrationStatus !== "Pending Payment") return res.status(400).json({ message: "Only registrations awaiting payment can be edited." });
+        if (isAdmin && ["Cancelled", "Completed"].includes(registration.registrationStatus)) return res.status(400).json({ message: "This registration can no longer be edited." });
+        const { participationType, teamName = "", numberOfMembers = 1 } = req.body;
+        const event = registration.event;
+        if (!["Individual", "Team"].includes(participationType)) return res.status(400).json({ message: "Choose a valid participation type." });
+        if (participationType === "Team") {
+            const count = Number(numberOfMembers);
+            if (!event.participationType?.team || !String(teamName).trim()) return res.status(400).json({ message: "Team participation is unavailable or the team name is missing." });
+            if (!Number.isInteger(count) || count < event.teamSettings.minMembers || count > event.teamSettings.maxMembers) return res.status(400).json({ message: `Team members must be between ${event.teamSettings.minMembers} and ${event.teamSettings.maxMembers}.` });
+            registration.participation = { type: "Team", teamName: String(teamName).trim(), numberOfMembers: count };
+        } else {
+            if (!event.participationType?.individual) return res.status(400).json({ message: "Individual participation is unavailable." });
+            registration.participation = { type: "Individual", teamName: "", numberOfMembers: 1 };
+        }
+        await registration.save();
+        return res.json({ success: true, message: "Registration updated.", registration });
+    } catch (error) { next(error); }
 };

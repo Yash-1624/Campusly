@@ -28,6 +28,7 @@ export default function PrivacyControls() {
     const [consent, setConsent] = useState(getConsent);
     const [open, setOpen] = useState(() => !readCookie(CONSENT_COOKIE));
     const [locationMessage, setLocationMessage] = useState("");
+    const hasAllPermissions = consent.analytics === true && consent.location === true;
 
     const saveConsent = (next) => {
         setConsent(next);
@@ -73,7 +74,7 @@ export default function PrivacyControls() {
                     <button type="button" className="privacy-secondary" onClick={requestLocation}>Allow location</button>
                     <button type="button" className="privacy-primary" onClick={() => saveConsent({ analytics: true, location: consent.location })}>Accept analytics</button>
                 </div>
-            </section> : <button className="privacy-reopen" type="button" onClick={() => setOpen(true)}>Privacy settings</button>}
+            </section> : !hasAllPermissions && <button className="privacy-reopen" type="button" onClick={() => setOpen(true)}>Privacy settings</button>}
             {open && readCookie(CONSENT_COOKIE) && <button type="button" className="privacy-close" onClick={() => setOpen(false)} aria-label="Close privacy choices">×</button>}
         </>
     );

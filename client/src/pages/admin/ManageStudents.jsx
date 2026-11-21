@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 import Loading from "../../components/Loading";
+import AdminStatsBoard from "../../components/AdminStatsBoard";
+import AdminPageHero from "../../components/AdminPageHero";
 
 const emptyForm = {
     fullName: "",
@@ -25,7 +27,7 @@ export default function ManageStudents() {
     const loadStudents = async () => {
         try {
             const { data } = await api.get("/admin/students");
-            setStudents(data.students || []);
+            setStudents(Array.isArray(data.students) ? data.students.filter((student) => student && typeof student === "object") : []);
         } catch (err) {
             setError(
                 err.response?.data?.message || "Unable to load students."
@@ -102,29 +104,15 @@ export default function ManageStudents() {
 
     return (
         <main className="container admin-students-page">
-            {/* Header */}
-            <div className="page-heading">
-                <div>
-                    <p className="login-eyebrow">ADMINISTRATION</p>
-                    <h1>Manage Students</h1>
-                    <p className="page-subtitle">
-                        Create student accounts and maintain student profiles.
-                    </p>
-                </div>
-
-                <button
-                    className="button primary"
-                    onClick={() => {
-                        setShowForm((v) => !v);
-                        setError("");
-                        setMessage("");
-                    }}
-                >
-                    ＋ Add New Student
-                </button>
-            </div>
+            <AdminPageHero eyebrow="STUDENT MANAGEMENT" title="Manage Students" description="Create student accounts and maintain student profiles." actions={<button className="button primary" onClick={() => { setShowForm((value) => !value); setError(""); setMessage(""); }}>{showForm ? "Close form" : "+ Add New Student"}</button>} />
 
             {/* Alerts */}
+            {students && <AdminStatsBoard items={[
+                { label: "Total students", value: students.length, note: "Registered student accounts", icon: "?" },
+                { label: "Email verified", value: students.filter((student) => student?.isEmailVerified).length, note: "Ready to participate", icon: "?" },
+                { label: "Need verification", value: students.filter((student) => !student?.isEmailVerified).length, note: "Follow up if needed", icon: "?" },
+                { label: "Search results", value: filtered.length, note: "Matching your search", icon: "?" },
+            ]} />}
             {message && <div className="alert success">{message}</div>}
             {error && <div className="alert error">{error}</div>}
 

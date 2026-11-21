@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import Loading from "../../components/Loading";
-import DashboardSidebar from "../../components/DashboardSidebar";
 
 export default function StudentDashboard() {
     const { user } = useAuth();
@@ -33,7 +32,6 @@ export default function StudentDashboard() {
 
     return (
         <div className="dashboard-shell dashboard-shell-student">
-        <DashboardSidebar role="student" />
         <main className="container student-dashboard-page">
             <section className="dashboard-welcome">
                 <div><p className="eyebrow">YOUR CAMPUS, YOUR CALENDAR</p><h1>Good to see you, {user?.fullName?.split(" ")[0] || "there"}.</h1><p>Find your next reason to get together.</p></div>
@@ -54,7 +52,7 @@ export default function StudentDashboard() {
                     {upcoming.length ? <div className="dashboard-event-list">{upcoming.slice(0, 4).map((registration) => <Link className="dashboard-event-row" to={`/student/registrations/${registration._id}`} key={registration._id}>
                         <span className="dashboard-date"><b>{new Date(registration.event.date).toLocaleDateString("en", { day: "2-digit" })}</b><small>{new Date(registration.event.date).toLocaleDateString("en", { month: "short" })}</small></span>
                         <span className="dashboard-event-info"><strong>{registration.event.name}</strong><small>{registration.event.category} · {registration.event.location}</small></span>
-                        <span className="registration-state">{registration.registrationStatus || "Registered"}</span><b className="row-arrow">↗</b>
+                        <span className={`registration-state${String(registration.registrationStatus || "").toLowerCase().includes("pending") ? " is-payment-pending" : ""}`}>{registration.registrationStatus || "Registered"}</span><b className="row-arrow">↗</b>
                     </Link>)}</div> : <div className="dashboard-empty"><span>✳</span><h3>Your calendar is open.</h3><p>Find an event and it’ll show up here.</p><Link to="/student/events">Explore events ↗</Link></div>}
                 </div>
                 <aside className="dashboard-panel quick-panel"><p className="eyebrow">QUICK LINKS</p><h2>Make it happen.</h2><Link to="/student/events"><span className="quick-icon">✦</span><span><strong>Find an event</strong><small>See what’s happening on campus</small></span><b>↗</b></Link><Link to="/student/profile"><span className="quick-icon">◉</span><span><strong>Your profile</strong><small>Keep your details up to date</small></span><b>↗</b></Link><Link to="/student/registrations"><span className="quick-icon">▤</span><span><strong>Registrations</strong><small>Tickets and booking status</small></span><b>↗</b></Link></aside>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 import Loading from "../../components/Loading";
+import AdminStatsBoard from "../../components/AdminStatsBoard";
+import AdminPageHero from "../../components/AdminPageHero";
 
 const emptyForm = { fullName: "", departmentName: "", mobileNumber: "", studentId: "", email: "", eventIds: [] };
 export default function ManageVolunteers() {
@@ -15,9 +17,9 @@ export default function ManageVolunteers() {
 
     const load = async () => {
         const [v, e] = await Promise.all([api.get("/admin/volunteers"), api.get("/events")]);
-        setVolunteers(v.data.volunteers || []);
+        setVolunteers(Array.isArray(v.data.volunteers) ? v.data.volunteers.filter((item) => item && typeof item === "object") : []);
         const list = e.data.events || e.data || [];
-        setEvents(Array.isArray(list) ? list : []);
+        setEvents(Array.isArray(list) ? list.filter((item) => item && typeof item === "object") : []);
     };
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -37,7 +39,12 @@ export default function ManageVolunteers() {
     };
     if (!volunteers) return <Loading />;
     return <main className="container admin-volunteers-page">
-        <div className="page-heading"><div><p className="login-eyebrow">ADMINISTRATION</p><h1>Manage Volunteers</h1><p className="page-subtitle">Create volunteer accounts, assign one or more events, and email a separate allocation notice for each event.</p></div><button className="button primary" onClick={() => { setShowForm((v) => !v); setError(""); setMessage(""); setCredentials(null); }}>{showForm ? "Cancel" : "+ Add Volunteer"}</button></div>
+        <AdminPageHero eyebrow="PEOPLE & EVENT SUPPORT" title="Manage Volunteers" description="Create volunteer accounts, assign events, and email an allocation notice for each event." actions={<button className="button primary" onClick={() => { setShowForm((value) => !value); setError(""); setMessage(""); setCredentials(null); }}>{showForm ? "Cancel" : "+ Add Volunteer"}</button>} />
+        <AdminStatsBoard items={[
+            { label: "Volunteers", value: volunteers.length, note: "Active accounts", icon: "?" },
+            { label: "Assigned events", value: events.length, note: "Available for assignment", icon: "?" },
+            { label: "Event allocations", value: volunteers.reduce((sum, volunteer) => sum + (volunteer.assignedEvents || []).length, 0), note: "Across all volunteers", icon: "?" },
+        ]} />
         {error && <div className="alert error">{error}</div>}{message && <div className="alert success">{message}</div>}
         {credentials && <section className="card volunteer-credentials"><h2>Credentials emailed successfully</h2><p>The volunteer's Login ID and temporary password have been sent to <strong>{credentials.email}</strong>.</p><p><strong>Login ID:</strong> {credentials.loginId}</p><p>The temporary password is intentionally not displayed here. Ask the volunteer to check their inbox (and spam folder).</p></section>}
         {showForm && <form className="card admin-form-card" onSubmit={create}><h2>New Volunteer</h2><div className="admin-form-grid">

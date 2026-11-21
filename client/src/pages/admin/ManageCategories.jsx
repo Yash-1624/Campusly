@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
+import AdminStatsBoard from "../../components/AdminStatsBoard";
+import AdminPageHero from "../../components/AdminPageHero";
 
 const ManageCategories = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
     const [updatingId, setUpdatingId] = useState(null);
+    const [categoryName, setCategoryName] = useState("");
+    const [creating, setCreating] = useState(false);
 
     // ========================================
     // LOAD CATEGORIES
@@ -36,7 +41,7 @@ const ManageCategories = () => {
                 [];
 
             if (Array.isArray(receivedCategories)) {
-                setCategories(receivedCategories);
+                setCategories(receivedCategories.filter((category) => category && typeof category === "object"));
             } else {
                 setCategories([]);
                 setError("Invalid categories data received from server.");
@@ -64,6 +69,34 @@ const ManageCategories = () => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchCategories();
     }, [fetchCategories]);
+
+    const handleCreateCategory = async (event) => {
+        event.preventDefault();
+        const name = categoryName.trim();
+        if (!name) {
+            setError("Enter a category name first.");
+            return;
+        }
+
+        setCreating(true);
+        setError("");
+        setSuccess("");
+        try {
+            const { data } = await api.post("/categories", { name });
+            setCategories((previous) => {
+                if (!data?.category || typeof data.category.name !== "string") return previous;
+                const existingIndex = previous.findIndex((item) => item?.name?.toLowerCase() === data.category.name.toLowerCase());
+                if (existingIndex < 0) return [...previous, data.category].sort((a, b) => a.name.localeCompare(b.name));
+                return previous.map((item, index) => index === existingIndex ? data.category : item).sort((a, b) => a.name.localeCompare(b.name));
+            });
+            setCategoryName("");
+            setSuccess(data.message || "Category created successfully.");
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not create the category.");
+        } finally {
+            setCreating(false);
+        }
+    };
 
 
     // ========================================
@@ -149,18 +182,20 @@ const ManageCategories = () => {
 
             <div className="admin-content">
 
-                <div className="page-header">
+                <AdminPageHero eyebrow="EVENT ORGANIZATION" title="Categories" description="Create categories anytime and organize your campus events by type." />
 
-                    <div>
-                        <h1>Categories</h1>
+                <AdminStatsBoard items={[
+                    { label: "Total categories", value: categories.length, note: "Across your event library", icon: "?" },
+                    { label: "Active", value: categories.filter((category) => category?.isActive).length, note: "Available for events", icon: "?" },
+                    { label: "Inactive", value: categories.filter((category) => !category?.isActive).length, note: "Can be restored anytime", icon: "?" },
+                ]} />
 
-                        <p>
-                            Manage the categories created
-                            through your events.
-                        </p>
-                    </div>
-
-                </div>
+                <form className="category-create-panel" onSubmit={handleCreateCategory}>
+                    <div className="category-create-icon" aria-hidden="true">?</div>
+                    <div className="category-create-copy"><h2>Add a category</h2><p>Give your category a clear name, such as Technical, Cultural, or Sports.</p></div>
+                    <label className="category-create-field"><span>Category name</span><input autoFocus maxLength={60} value={categoryName} onChange={(event) => setCategoryName(event.target.value)} placeholder="e.g. Artificial Intelligence" required /></label>
+                    <button type="submit" className="button primary" disabled={creating || !categoryName.trim()}>{creating ? "Creating..." : "Create Category"}</button>
+                </form>
 
 
                 {/* ========================================
@@ -172,6 +207,8 @@ const ManageCategories = () => {
                         {error}
                     </div>
                 )}
+
+                {success && <div className="alert success category-create-success" role="status">{success}</div>}
 
 
                 {/* ========================================
@@ -187,9 +224,8 @@ const ManageCategories = () => {
                         </h3>
 
                         <p>
-                            Categories will appear here
-                            automatically when you create
-                            an event with a category.
+                            Create your first category here, or it will
+                            be added automatically when you create an event.
                         </p>
 
                     </div>
@@ -235,10 +271,7 @@ const ManageCategories = () => {
 
                                 <div className="category-card-body">
 
-                                    <p>
-                                        Category created from
-                                        an event.
-                                    </p>
+                                    <p>Use this category to group related campus events.</p>
 
                                 </div>
 

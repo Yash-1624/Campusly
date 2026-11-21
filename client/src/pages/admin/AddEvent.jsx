@@ -257,8 +257,9 @@ export default function AddEvent() {
                 onSubmit={submit}
             >
 
-                <div className="add-form-heading"><span className="add-event-eyebrow">LET’S GET IT ON THE CALENDAR</span><h2>Add your event</h2><p>Start with the essentials. You can update these details anytime.</p></div>
+                <header className="add-form-heading"><div className="add-form-heading-copy"><span className="add-event-eyebrow">LET’S GET IT ON THE CALENDAR</span><h1>Add your event</h1><p>Start with the essentials. You can update these details anytime.</p></div><div className="add-form-heading-art" aria-hidden="true"><span>✳</span><i></i><small>CAMPUSLY EVENTS</small></div></header>
 
+                <div className="add-event-fields">
                 {/* ==================================
             ERROR MESSAGE
         ================================== */}
@@ -618,6 +619,26 @@ export default function AddEvent() {
                         : "Create Event"}
 
                 </button>
+
+                </div>
+
+                <aside className="add-event-live-preview" aria-label="Live event preview">
+                    <div className="preview-panel-heading"><span>LIVE PREVIEW</span><span className="preview-live-dot">UPDATING</span></div>
+                    <article className="add-event-preview-card">
+                        <div className="add-event-preview-art">
+                            {imageUrl ? <img src={imageUrl} alt="Selected event poster preview" /> : <div className="add-event-preview-orbit"><span>?</span><i></i><b></b></div>}
+                            <span className="preview-category">{form.category.trim() || "EVENT CATEGORY"}</span>
+                        </div>
+                        <div className="add-event-preview-content">
+                            <div className="preview-status-row"><span className={`preview-status ${form.status === "Draft" ? "draft" : "open"}`}><i></i>{form.status}</span><span className="preview-format">{form.team && form.individual ? "Individual + team" : form.team ? "Team event" : "Individual"}</span></div>
+                            <h2>{form.name.trim() || "Your event name"}</h2>
+                            <p>{form.description.trim() || "A short event description will appear here to help students decide if they want to join."}</p>
+                            <div className="preview-event-facts"><span><i>?</i>{form.date ? new Date(form.date).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "Date to be announced"}</span><span><i>?</i>{form.location.trim() || "Venue to be announced"}</span></div>
+                            <footer><span>{Number(form.fee) > 0 ? `?${Number(form.fee).toLocaleString("en-IN")}` : "Free entry"}</span><b>EVENT PASS <i>?</i></b></footer>
+                        </div>
+                    </article>
+                    <p className="preview-note"><span>?</span> Your preview updates as you fill in the event details.</p>
+                </aside>
 
             </form>
 

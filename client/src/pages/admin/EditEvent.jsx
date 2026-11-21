@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
+import AdminPageHero from "../../components/AdminPageHero";
 
 function formatDateTimeLocal(value) {
 
@@ -535,12 +536,8 @@ const EditEvent = () => {
     return (
 
         <div className="admin-page">
-
+            <AdminPageHero eyebrow="EVENT MANAGEMENT" title="Edit Event" description="Update event details, registration settings, and event visibility." />
             <div className="form-card">
-
-                <h1>
-                    Edit Event
-                </h1>
 
 
                 {/* ========================================

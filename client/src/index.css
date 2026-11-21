@@ -3402,3 +3402,12 @@ body {
 .site-location-panel { margin-top: 22px; }
 :root[data-theme="dark"] .site-insights-row strong { color: #edf2fa; }
 :root[data-theme="dark"] .site-insights-row span,:root[data-theme="dark"] .site-insights-note { color: #b0bdd0; }
+
+/* Keep payment details in the same readable weight hierarchy as registration pages. */
+.payment-summary-label { display:inline-block; min-width:112px; color:#687383; font-weight:600; }
+.payments-page .payments-title { font-weight:650; }
+.payments-page .payment-stat-label { font-weight:650; }
+.payments-page .payment-stat-value { font-weight:650; }
+.payments-page .payments-table th { font-weight:650; }
+.payments-page .payment-primary-text { font-weight:600; }
+.payments-page .payment-amount,.payments-page .payment-status { font-weight:650; }

@@ -12,6 +12,8 @@ import api from "../../services/api";
 import EventCard from "../../components/EventCard";
 
 import Loading from "../../components/Loading";
+import AdminStatsBoard from "../../components/AdminStatsBoard";
+import AdminPageHero from "../../components/AdminPageHero";
 
 
 export default function ManageEvents() {
@@ -21,6 +23,8 @@ export default function ManageEvents() {
     const [error, setError] = useState("");
 
     const [actionLoading, setActionLoading] = useState(false);
+
+    const [referenceTime] = useState(() => Date.now());
 
 
     // ========================================
@@ -38,7 +42,7 @@ export default function ManageEvents() {
             );
 
             setEvents(
-                data.events || []
+                Array.isArray(data.events) ? data.events.filter(Boolean) : []
             );
 
         } catch (err) {
@@ -187,31 +191,15 @@ export default function ManageEvents() {
             {/* PAGE HEADING */}
             {/* ================================ */}
 
-            <div className="page-heading">
-
-                <div>
-
-                    <h1>
-                        Manage Events
-                    </h1>
-
-                    <p className="hint">
-                        Create, manage and control
-                        your college events.
-                    </p>
-
-                </div>
+            <AdminPageHero eyebrow="EVENT MANAGEMENT" title="Manage Events" description="Create, manage and control your college events." actions={<Link className="button primary" to="/control-center/events/add">+ Add Event</Link>} />
 
 
-                <Link
-                    className="button primary"
-                    to="/control-center/events/add"
-                >
-                    + Add Event
-                </Link>
-
-            </div>
-
+            <AdminStatsBoard items={[
+                { label: "All events", value: events.length, note: "In your workspace", icon: "?" },
+                { label: "Registration open", value: events.filter((event) => event?.status === "Registration Open").length, note: "Accepting participants", icon: "?" },
+                { label: "Upcoming", value: events.filter((event) => event?.date && new Date(event.date).getTime() >= referenceTime).length, note: "Still ahead on calendar", icon: "?" },
+                { label: "Drafts", value: events.filter((event) => event?.status === "Draft").length, note: "Not published yet", icon: "?" },
+            ]} />
 
             {/* ================================ */}
             {/* ERROR MESSAGE */}

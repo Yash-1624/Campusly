@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import DashboardSidebar from "../../components/DashboardSidebar";
 import Loading from "../../components/Loading";
 import api from "../../services/api";
 
@@ -17,7 +16,6 @@ export default function SiteInsights() {
     if (!data && !error) return <Loading text="Loading site insights…" />;
 
     return <div className="dashboard-shell dashboard-shell-admin">
-        <DashboardSidebar role="admin" />
         <main className="container admin-dashboard-page site-insights-page">
             <section className="admin-welcome"><div><p className="eyebrow">CAMPUS EVENTS / PRIVACY FIRST ANALYTICS</p><h1>Site insights</h1><p>Anonymous activity from visitors who accepted analytics, for the last 30 days.</p></div></section>
             {error && <div className="alert error" role="alert">{error}</div>}

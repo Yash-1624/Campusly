@@ -252,10 +252,16 @@ const createPayment = async (req, res) => {
     } catch (error) {
         console.error("CREATE PAYMENT ERROR:", error);
 
-        return res.status(500).json({
+        const gatewayMessage =
+            error?.error?.description ||
+            error?.description ||
+            error?.message;
+
+        return res.status(502).json({
             success: false,
-            message: "Failed to create payment order.",
-            error: error.message,
+            message: gatewayMessage
+                ? `Could not start checkout: ${gatewayMessage}`
+                : "Could not start checkout. Please try again.",
         });
     }
 };

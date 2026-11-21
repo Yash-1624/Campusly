@@ -10,6 +10,14 @@ export default function EventDetails() {
     const [event, setEvent] = useState(null);
     const [related, setRelated] = useState([]);
     const [error, setError] = useState("");
+    const [now, setNow] = useState(0);
+
+    useEffect(() => {
+        const updateNow = () => setNow(Date.now());
+        updateNow();
+        const timer = window.setInterval(updateNow, 1_000);
+        return () => window.clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -29,6 +37,7 @@ export default function EventDetails() {
 
     const team = Boolean(event.participationType?.team);
     const individual = event.participationType?.individual !== false;
+    const registrationOpen = ["Published", "Registration Open"].includes(event.status) && new Date(event.registrationStartDate).getTime() <= now && new Date(event.registrationEndDate).getTime() > now && new Date(event.date).getTime() >= now;
 
     return (
         <main className="container event-detail-page">
@@ -48,7 +57,7 @@ export default function EventDetails() {
                     <section className="event-about"><p className="eyebrow">ABOUT THIS EVENT</p><h2>What to expect</h2><p className="event-full-description">{event.description}</p></section>
                     {related.length > 0 && <section className="related-events"><div className="related-heading"><div><p className="eyebrow">KEEP EXPLORING</p><h2>More in {event.category}</h2></div><Link to="/student/events">All events ↗</Link></div><div className="related-event-list">{related.map((item) => <Link key={item._id} to={`/student/events/${item._id}`} className="related-event-card"><span className="related-date">{new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(item.date))}</span><span><strong>{item.name}</strong><small>{item.location}</small></span><b aria-hidden="true">↗</b></Link>)}</div></section>}
                 </article>
-                <aside className="event-booking-card"><span className="booking-status"><i />{event.status}</span><p className="booking-label">Registration fee</p><div className="booking-price">{Number(event.fee) > 0 ? `₹${Number(event.fee).toLocaleString("en-IN")}` : "Free"}<small>{Number(event.fee) > 0 ? "per participant" : "No ticket fee"}</small></div><div className="booking-window"><small>REGISTRATION WINDOW</small><strong>{dateTime(event.registrationStartDate)}</strong><span>through</span><strong>{dateTime(event.registrationEndDate)}</strong></div><Link className="button primary event-register-button" to={`/student/events/${id}/register`}>Register for event <span aria-hidden="true">↗</span></Link><p className="booking-note">Your place is confirmed after registration is complete.</p></aside>
+                <aside className="event-booking-card"><span className="booking-status"><i />{registrationOpen ? "Registration Open" : "Registration Closed"}</span><p className="booking-label">Registration fee</p><div className="booking-price">{Number(event.fee) > 0 ? `₹${Number(event.fee).toLocaleString("en-IN")}` : "Free"}<small>{Number(event.fee) > 0 ? "per participant" : "No ticket fee"}</small></div><div className="booking-window"><small>REGISTRATION WINDOW</small><strong>{dateTime(event.registrationStartDate)}</strong><span>through</span><strong>{dateTime(event.registrationEndDate)}</strong></div>{registrationOpen ? <Link className="button primary event-register-button" to={`/student/events/${id}/register`}>Register for event <span aria-hidden="true">↗</span></Link> : <button type="button" className="button secondary event-register-button" disabled>Registration closed</button>}<p className="booking-note">Your place is confirmed after registration is complete.</p></aside>
             </div>
         </main>
     );

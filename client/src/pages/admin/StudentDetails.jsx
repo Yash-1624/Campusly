@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../../services/api";
 import Loading from "../../components/Loading";
+import AdminPageHero from "../../components/AdminPageHero";
 
 const profileFields = [
     ["fullName", "Full name"],
@@ -182,21 +183,7 @@ export default function StudentDetails() {
 
     return (
         <main className="container admin-student-details-page">
-            {/* Header */}
-            <div className="page-heading">
-                <div>
-                    <p className="login-eyebrow">STUDENT MANAGEMENT</p>
-                    <h1>Student Details</h1>
-                    <p className="page-subtitle">
-                        Edit the profile, add the student to an event, and manage generated
-                        ticket details.
-                    </p>
-                </div>
-
-                <Link className="button outline" to="/control-center/students">
-                    ← All Students
-                </Link>
-            </div>
+            <AdminPageHero eyebrow="STUDENT MANAGEMENT" title="Student Details" description="Edit the profile, add the student to an event, and manage generated ticket details." actions={<Link className="button primary" to="/control-center/students">All Students</Link>} />
 
             {/* Alerts */}
             {message && <div className="alert success">{message}</div>}
@@ -378,7 +365,7 @@ export default function StudentDetails() {
                                     <tr key={registration._id}>
                                         <td>{registration.registrationId}</td>
                                         <td>{registration.event?.name || "Event"}</td>
-                                        <td>{registration.payment?.status || "Pending"}</td>
+                                        <td><span className={`payment-state${String(registration.payment?.status || "Pending").toLowerCase().includes("pending") ? " is-pending" : ""}`}>{registration.payment?.status || "Pending"}</span></td>
                                         <td>{registration.registrationStatus}</td>
                                         <td>
                                             {new Date(registration.createdAt).toLocaleDateString()}

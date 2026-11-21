@@ -29,6 +29,24 @@ export default function Signup() {
     const [fieldErrors, setFieldErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [submitted, setSubmitted] = useState(false);
+    const completedSignupFields = Object.values(form).filter((value) => value.trim()).length;
+
+    const tiltSignupCard = (event) => {
+        if (event.pointerType !== "mouse") return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+        const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+        event.currentTarget.style.setProperty("--signup-tilt-x", `${y * -2.4}deg`);
+        event.currentTarget.style.setProperty("--signup-tilt-y", `${x * 2.8}deg`);
+        event.currentTarget.style.setProperty("--signup-glow-x", `${(x + 0.5) * 100}%`);
+        event.currentTarget.style.setProperty("--signup-glow-y", `${(y + 0.5) * 100}%`);
+        event.currentTarget.classList.add("is-tilting");
+    };
+
+    const resetSignupCard = (event) => {
+        event.currentTarget.classList.remove("is-tilting");
+        ["--signup-tilt-x", "--signup-tilt-y", "--signup-glow-x", "--signup-glow-y"].forEach((property) => event.currentTarget.style.removeProperty(property));
+    };
 
     const validateField = (name, value, values = form) => {
         const clean = value.trim();
@@ -204,13 +222,17 @@ export default function Signup() {
     return (
         <div className="auth-page auth-page-student">
             <AuthShowcase mode="signup" />
-            <form className="form-card wide" onSubmit={submit} noValidate autoComplete="on">
+            <form className="form-card wide signup-card-3d" onSubmit={submit} onPointerMove={tiltSignupCard} onPointerLeave={resetSignupCard} noValidate autoComplete="on">
+                <div className="signup-form-topline">
+                    <span className="signup-form-brand"><i aria-hidden="true">✦</i> YOUR CAMPUS, YOUR STORY</span>
+                    <span className="signup-field-count">{completedSignupFields}<b>/</b>8 details</span>
+                </div>
                 <h1>Create Student Account</h1>
 
-                <p>
-                    Create your student profile and verify your email to
-                    register for college events.
-                </p>
+                <p className="signup-form-intro">Set up your profile, verify your email, and find your next campus moment.</p>
+
+                <div className="signup-progress-track" role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={8} aria-valuenow={completedSignupFields}><span style={{ width: `${completedSignupFields / 8 * 100}%` }} /></div>
+                <div className="signup-progress-caption"><span><i>01</i> Student profile</span><b /><span><i>02</i> Email verification</span><span className="signup-secure-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10V7a6 6 0 0 1 12 0v3"/><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M12 14v3"/></svg> Secure signup</span></div>
 
                 {message && (
                     <div className="alert success" role="status">

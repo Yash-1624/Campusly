@@ -5,6 +5,7 @@ const router =
 
 const {
     getCategories,
+    createCategory,
     activateCategory,
     deactivateCategory
 } =
@@ -26,6 +27,13 @@ router.get(
     protect,
     adminOnly,
     getCategories
+);
+
+router.post(
+    "/",
+    protect,
+    adminOnly,
+    createCategory
 );
 
 

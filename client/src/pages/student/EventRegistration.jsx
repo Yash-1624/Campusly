@@ -4,6 +4,7 @@ import {
 } from "react";
 
 import {
+    Link,
     useNavigate,
     useParams
 } from "react-router-dom";
@@ -22,6 +23,15 @@ export default function EventRegistration() {
 
     const navigate =
         useNavigate();
+
+    const [now, setNow] = useState(0);
+
+    useEffect(() => {
+        const updateNow = () => setNow(Date.now());
+        updateNow();
+        const timer = window.setInterval(updateNow, 1_000);
+        return () => window.clearInterval(timer);
+    }, []);
 
 
     const [event, setEvent] =
@@ -142,6 +152,8 @@ export default function EventRegistration() {
     const submit = async (e) => {
 
         e.preventDefault();
+        const now = Date.now();
+        if (!["Published", "Registration Open"].includes(event?.status) || new Date(event?.registrationStartDate).getTime() > now || new Date(event?.registrationEndDate).getTime() <= now || new Date(event?.date).getTime() < now) { setError("Registration is not currently open for this event."); return; }
 
         setError("");
 
@@ -259,6 +271,23 @@ export default function EventRegistration() {
         return <Loading />;
     }
 
+    const registrationOpen = ["Published", "Registration Open"].includes(event.status)
+        && new Date(event.registrationStartDate).getTime() <= now
+        && new Date(event.registrationEndDate).getTime() > now
+        && new Date(event.date).getTime() >= now;
+
+    if (!registrationOpen) {
+        return (
+            <main className="container narrow">
+                <section className="form-card">
+                    <h1>Registration is closed</h1>
+                    <p>The registration window for {event.name} is not open now.</p>
+                    <Link className="button secondary" to={`/student/events/${id}`}>Back to event details</Link>
+                </section>
+            </main>
+        );
+    }
+
 
     return (
 
@@ -274,6 +303,7 @@ export default function EventRegistration() {
                 </h1>
 
 
+                {!["Published", "Registration Open"].includes(event.status) || new Date(event.registrationStartDate).getTime() > now || new Date(event.registrationEndDate).getTime() <= now || new Date(event.date).getTime() < now ? <div className="alert error">Registration is not currently open for this event.</div> : null}
                 {error && (
                     <div className="alert error">
                         {error}
@@ -596,7 +626,11 @@ export default function EventRegistration() {
 
                     disabled={
                         submitting ||
-                        !participationType
+                        !participationType ||
+                        !["Published", "Registration Open"].includes(event.status) ||
+                        new Date(event.registrationStartDate).getTime() > now ||
+                        new Date(event.registrationEndDate).getTime() <= now ||
+                        new Date(event.date).getTime() < now
                     }
                 >
 

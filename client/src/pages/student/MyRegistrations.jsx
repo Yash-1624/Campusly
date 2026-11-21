@@ -161,19 +161,15 @@ export default function MyRegistrations() {
                                     </td>
 
                                     <td>
-                                        {
-                                            registration
-                                                .payment
-                                                ?.status ||
-                                            "Pending"
-                                        }
+                                        <span className={`payment-state${String(registration.payment?.status || "Pending").toLowerCase().includes("pending") ? " is-pending" : ""}`}>
+                                            {registration.payment?.status || "Pending"}
+                                        </span>
                                     </td>
 
                                     <td>
-                                        {
-                                            registration
-                                                .registrationStatus
-                                        }
+                                        <span className={`payment-state${String(registration.registrationStatus || "").toLowerCase().includes("pending") ? " is-pending" : ""}`}>
+                                            {registration.registrationStatus}
+                                        </span>
                                     </td>
 
                                     <td>

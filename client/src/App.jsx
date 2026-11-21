@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import Navbar
   from "./components/Navbar";
+import DashboardSidebar from "./components/DashboardSidebar";
 
 import ProtectedRoute
   from "./components/ProtectedRoute";
@@ -13,6 +14,7 @@ import VolunteerRoute from "./components/VolunteerRoute";
 import Loading from "./components/Loading";
 import CampuslyChatbot from "./components/CampuslyChatbot";
 import PrivacyControls from "./components/PrivacyControls";
+import PageErrorBoundary from "./components/PageErrorBoundary";
 import { useAuth } from "./context/AuthContext";
 
 const Login = lazy(() => import("./pages/Login"));
@@ -55,11 +57,15 @@ export default function App() {
 
     <>
 
-      <Navbar />
+      {!user && <Navbar />}
       <PrivacyControls />
       {chatbotEnabled && <CampuslyChatbot />}
 
+      <div className={user && ["student", "admin"].includes(user.role) ? `authenticated-layout${user.role === "admin" ? " admin-workspace" : ""}` : ""}>
+      {user && ["student", "admin"].includes(user.role) && <DashboardSidebar role={user.role} />}
+      <div className={user && ["student", "admin"].includes(user.role) ? "authenticated-content" : ""}>
       <Suspense fallback={<Loading />}>
+      <PageErrorBoundary key={location.pathname}>
       <Routes>
 
         {/* ------------------------------------------------ */}
@@ -293,7 +299,10 @@ export default function App() {
         />
 
       </Routes>
+      </PageErrorBoundary>
       </Suspense>
+      </div>
+      </div>
 
     </>
 

@@ -6,7 +6,8 @@ const {
     getMyRegistrations,
     getRegistrationById,
     getAllRegistrations,
-    adminAddRegistration
+    adminAddRegistration,
+    updateRegistration
 } = require("../controllers/registrationController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -33,7 +34,8 @@ router.post(
     "/admin/add",
     protect,
     adminOnly,
-    adminAddRegistration
+    adminAddRegistration,
+    updateRegistration
 );
 
 router.get(
@@ -48,8 +50,9 @@ router.get(
 // SINGLE REGISTRATION
 // ===============================
 
-// Get registration by ID
+// Get and update a registration
 router.get("/:id", protect, getRegistrationById);
+router.patch("/:id", protect, updateRegistration);
 
 
 module.exports = router;

@@ -236,3 +236,43 @@
 @media(prefers-reduced-motion:reduce) {
     .auth-beam,.auth-disco-ball,.auth-scene-spark { animation:none; }
 }
+
+/* Signup form matches the dimensional event artwork without changing its flow. */
+.auth-page.auth-page-student .signup-card-3d { position:relative; overflow:hidden; isolation:isolate; border:1px solid rgba(130,117,225,.2); border-radius:22px; background:linear-gradient(145deg,#fff 0%,#fff 75%,#fafaff 100%); box-shadow:0 30px 72px rgba(36,39,104,.15),0 9px 24px rgba(40,48,82,.07),inset 0 1px 0 #fff; transform:perspective(1500px) rotateX(0) rotateY(0); transition:transform .22s ease-out,box-shadow .3s ease,border-color .3s ease; }
+.auth-page.auth-page-student .signup-card-3d::before { position:absolute; z-index:-1; top:0; right:0; left:0; height:4px; background:linear-gradient(90deg,#4f46e5,#9a5ce7,#43a9ed,#4f46e5); background-size:220% 100%; content:""; animation:auth-card-spectrum 7s linear infinite; }
+.auth-page.auth-page-student .signup-card-3d::after { position:absolute; z-index:-1; inset:0; border-radius:inherit; background:radial-gradient(360px circle at var(--signup-glow-x,90%) var(--signup-glow-y,0%),rgba(131,112,245,.15),transparent 72%); content:""; pointer-events:none; }
+.auth-page.auth-page-student .signup-card-3d.is-tilting { transform:perspective(1500px) rotateX(var(--signup-tilt-x,0deg)) rotateY(var(--signup-tilt-y,0deg)) translateZ(0); border-color:rgba(112,98,217,.4); box-shadow:0 39px 86px rgba(36,39,104,.2),0 13px 30px rgba(40,48,82,.1),inset 0 1px 0 #fff; }
+.signup-form-topline { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:-3px 0 12px; }
+.signup-form-brand { display:flex; align-items:center; gap:8px; color:#6558cf; font-size:10px; font-weight:850; letter-spacing:.13em; }
+.signup-form-brand i { display:grid; width:27px; height:27px; place-items:center; border:1px solid #e4dfff; border-radius:9px; color:#6656d6; background:linear-gradient(145deg,#f5f2ff,#e9e5ff); box-shadow:0 4px 10px rgba(96,81,199,.12),inset 0 1px 0 #fff; font-size:14px; font-style:normal; }
+.signup-field-count { display:flex; align-items:center; gap:5px; padding:6px 9px; border:1px solid #e7e9f2; border-radius:999px; color:#778195; background:linear-gradient(145deg,#fff,#f8f9fd); font-size:10px; font-weight:750; white-space:nowrap; }
+.signup-field-count:first-letter { color:#5b51cb; }.signup-field-count b { color:#b2b9c8; }
+.auth-page.auth-page-student .signup-card-3d h1 { margin:5px 0 7px; color:#1b2435; font-size:clamp(28px,2.6vw,35px); letter-spacing:-.055em; }
+.auth-page.auth-page-student .signup-card-3d .signup-form-intro { margin:0 0 12px; color:#768196; font-size:13px; line-height:1.55; }
+.signup-progress-track { height:5px; overflow:hidden; border-radius:999px; background:#eceefa; box-shadow:inset 0 1px 2px rgba(41,47,98,.08); }
+.signup-progress-track>span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#5e56dd,#9870ec 56%,#54afe8); box-shadow:0 0 11px rgba(109,91,224,.32); transition:width .3s ease; }
+.signup-progress-caption { display:flex; align-items:center; gap:9px; margin:9px 0 17px; color:#758096; font-size:10px; font-weight:700; }
+.signup-progress-caption>span:not(.signup-secure-note) { display:flex; align-items:center; gap:5px; white-space:nowrap; }
+.signup-progress-caption>span:first-child { color:#5048bb; }
+.signup-progress-caption>span>i { display:grid; width:20px; height:20px; place-items:center; border:1px solid #e4e2fa; border-radius:50%; color:#6257ce; background:#f2f0ff; font-size:8px; font-style:normal; }
+.signup-progress-caption>span:nth-of-type(2)>i { color:#8992a5; border-color:#e7eaf1; background:#f7f8fb; }
+.signup-progress-caption>b { width:24px; height:1px; background:#dfe2eb; }
+.signup-secure-note { display:flex; align-items:center; gap:5px; margin-left:auto; color:#329477; font-size:9px; white-space:nowrap; }
+.signup-secure-note svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.auth-page.auth-page-student .signup-card-3d .grid-2 { gap:15px 16px; }
+.auth-page.auth-page-student .signup-card-3d label { color:#354057; font-size:12px; font-weight:750; }
+.auth-page.auth-page-student .signup-card-3d input:not([type="checkbox"]) { min-height:43px; border:1px solid #e0e4ee; border-radius:10px; color:#222c40; background:linear-gradient(180deg,#fff,#fcfdff); box-shadow:0 2px 5px rgba(37,45,79,.025),inset 0 1px 0 #fff; transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease; }
+.auth-page.auth-page-student .signup-card-3d input:not([type="checkbox"]):focus { border-color:#7769e7; box-shadow:0 0 0 3px rgba(119,105,231,.13),0 5px 13px rgba(77,65,174,.07); }
+.auth-page.auth-page-student .signup-card-3d .hint { color:#8a94a8; font-size:10px; line-height:1.45; }
+.auth-page.auth-page-student .signup-card-3d .remember-me-row { margin:17px 0 14px; color:#68738a; font-size:11px; }
+.auth-page.auth-page-student .signup-card-3d>.button.primary { min-height:48px; border:1px solid rgba(255,255,255,.24); border-radius:11px; background:linear-gradient(110deg,#5149bb,#7160e5 54%,#5578dc); box-shadow:0 9px 19px rgba(88,75,198,.24),inset 0 1px 0 rgba(255,255,255,.3); transition:transform .18s ease,box-shadow .18s ease,filter .18s ease; }
+.auth-page.auth-page-student .signup-card-3d>.button.primary:hover { transform:translateY(-2px); filter:saturate(1.12) brightness(1.04); box-shadow:0 14px 26px rgba(88,75,198,.32),inset 0 1px 0 rgba(255,255,255,.4); }
+.auth-page.auth-page-student .signup-card-3d>p:last-child { margin:15px 0 0; color:#778195; text-align:center; }
+:root[data-theme="dark"] .auth-page.auth-page-student .signup-card-3d { border-color:rgba(157,145,255,.25); background:linear-gradient(145deg,#161e2f,#121a29 75%,#17182d); box-shadow:0 30px 72px rgba(0,0,0,.37),0 9px 24px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.04); }
+:root[data-theme="dark"] .auth-page.auth-page-student .signup-card-3d h1,:root[data-theme="dark"] .auth-page.auth-page-student .signup-card-3d label { color:#edf2fa; }
+:root[data-theme="dark"] .auth-page.auth-page-student .signup-card-3d .signup-form-intro,:root[data-theme="dark"] .auth-page.auth-page-student .signup-card-3d .remember-me-row { color:#aebbd0; }
+:root[data-theme="dark"] .auth-page.auth-page-student .signup-card-3d input:not([type="checkbox"]) { border-color:#344158; color:#eaf0f8; background:#101827; box-shadow:inset 0 1px 0 rgba(255,255,255,.025); }
+:root[data-theme="dark"] .signup-field-count { border-color:#353c54; color:#bbc4d7; background:#1a2235; }
+:root[data-theme="dark"] .signup-progress-caption { color:#aebbd0; }
+@media(max-width:680px) { .auth-page.auth-page-student .signup-card-3d { border-radius:18px; }.signup-progress-caption { gap:6px; font-size:9px; }.signup-progress-caption>b { width:14px; }.signup-secure-note { font-size:0; }.signup-secure-note svg { width:16px; height:16px; }.auth-page.auth-page-student .signup-card-3d .grid-2 { gap:13px; } }
+@media(prefers-reduced-motion:reduce) { .auth-page.auth-page-student .signup-card-3d,.auth-page.auth-page-student .signup-card-3d input,.auth-page.auth-page-student .signup-card-3d>.button.primary,.signup-progress-track>span { transition:none; }.auth-page.auth-page-student .signup-card-3d.is-tilting,.auth-page.auth-page-student .signup-card-3d>.button.primary:hover { transform:none; }.auth-page.auth-page-student .signup-card-3d::before { animation:none; } }

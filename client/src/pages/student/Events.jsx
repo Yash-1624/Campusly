@@ -22,7 +22,8 @@ export default function Events() {
     const categories = useMemo(() => ["All events", ...new Set(events.map((event) => event.category).filter(Boolean))], [events]);
     const filteredEvents = useMemo(() => {
         const query = search.trim().toLowerCase();
-        return events.filter((event) => (category === "All events" || event.category === category) && (!query || [event.name, event.category, event.location, event.description].some((value) => value?.toLowerCase().includes(query))));
+        const now = Date.now();
+        return events.filter((event) => new Date(event.date).getTime() >= now && (category === "All events" || event.category === category) && (!query || [event.name, event.category, event.location, event.description].some((value) => value?.toLowerCase().includes(query))));
     }, [events, search, category]);
 
     if (loading) return <Loading text="Finding campus events…" />;

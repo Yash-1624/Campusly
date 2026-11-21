@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import api from "../../services/api";
@@ -11,6 +11,8 @@ export default function Payment() {
     const [data, setData] = useState(null);
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState("");
+    const [attempt, setAttempt] = useState(0);
+    const orderRequest = useRef(null);
 
     // ========================================
     // LOAD RAZORPAY ORDER
@@ -18,67 +20,40 @@ export default function Payment() {
     useEffect(() => {
         let cancelled = false;
 
-        const createOrder = async () => {
-            if (!registrationId) {
-                setError("Registration ID is missing.");
-                return;
-            }
+        if (!registrationId) {
+            setError("Registration ID is missing.");
+            return undefined;
+        }
 
-            try {
-                setError("");
+        const requestKey = `${registrationId}:${attempt}`;
+        if (orderRequest.current?.key !== requestKey) {
+            orderRequest.current = {
+                key: requestKey,
+                promise: api.post("/payments/create", { registrationId }).then(({ data: result }) => result),
+            };
+        }
 
-                const response = await api.post("/payments/create", {
-                    registrationId,
-                });
-
-                const result = response.data;
-
-                if (!result?.success) {
-                    throw new Error(result?.message || "Could not create payment.");
-                }
-
-                // Free event → skip payment
+        setError("");
+        orderRequest.current.promise
+            .then((result) => {
+                if (cancelled) return;
+                if (!result?.success) throw new Error(result?.message || "Could not create payment.");
                 if (result.freeEvent) {
-                    navigate(`/student/registration-success/${registrationId}`, {
-                        replace: true,
-                    });
+                    navigate(`/student/registration-success/${registrationId}`, { replace: true });
                     return;
                 }
-
-                // Validate required fields
-                if (
-                    !result.registration ||
-                    !result.payment ||
-                    !result.razorpay?.orderId ||
-                    !result.razorpay?.keyId
-                ) {
-                    throw new Error(
-                        "Payment response is incomplete. Please refresh and try again."
-                    );
+                if (!result.registration || !result.payment || !result.razorpay?.orderId || !result.razorpay?.keyId) {
+                    throw new Error("Payment response is incomplete. Please refresh and try again.");
                 }
-
-                if (!cancelled) {
-                    setData(result);
-                }
-            } catch (err) {
+                setData(result);
+            })
+            .catch((err) => {
                 console.error("Payment order error:", err);
+                if (!cancelled) setError(err.response?.data?.message || err.message || "Could not create payment.");
+            });
 
-                if (!cancelled) {
-                    setError(
-                        err.response?.data?.message ||
-                        err.message ||
-                        "Could not create payment."
-                    );
-                }
-            }
-        };
-
-        createOrder();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [registrationId, navigate]);
+        return () => { cancelled = true; };
+    }, [registrationId, navigate, attempt]);
 
     // ========================================
     // LOAD RAZORPAY CHECKOUT SCRIPT
@@ -239,13 +214,10 @@ export default function Payment() {
                         {error}
                     </div>
 
-                    <button
-                        type="button"
-                        className="button primary"
-                        onClick={() => navigate("/student")}
-                    >
-                        Back to Dashboard
-                    </button>
+                    <div className="payment-error-actions">
+                        <button type="button" className="button primary" onClick={() => { setData(null); setError(""); setAttempt((value) => value + 1); }}>Try again</button>
+                        <button type="button" className="button secondary" onClick={() => navigate("/student")}>Back to Dashboard</button>
+                    </div>
                 </div>
             </main>
         );
@@ -273,15 +245,15 @@ export default function Payment() {
                 <h1>Event Payment</h1>
 
                 <p>
-                    <strong>Event:</strong> {event.name || "Event"}
+                    <span className="payment-summary-label">Event</span> {event.name || "Event"}
                 </p>
 
                 <p>
-                    <strong>Student:</strong> {studentInfo.fullName || "Student"}
+                    <span className="payment-summary-label">Student</span> {studentInfo.fullName || "Student"}
                 </p>
 
                 <p>
-                    <strong>Registration ID:</strong>{" "}
+                    <span className="payment-summary-label">Registration ID</span>{" "}
                     {registration.registrationId || registrationId}
                 </p>
 

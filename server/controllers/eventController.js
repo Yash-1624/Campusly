@@ -1,5 +1,6 @@
 const Event = require("../models/Event");
 const Category = require("../models/Category");
+const { closeExpiredRegistrations } = require("../services/eventLifecycle");
 
 // ========================================
 // GET EVENTS FOR STUDENTS
@@ -7,14 +8,17 @@ const Category = require("../models/Category");
 
 exports.getEvents = async (req, res, next) => {
     try {
-
+        const now = new Date();
+        await closeExpiredRegistrations(now);
         const events = await Event.find({
             status: {
                 $in: [
                     "Published",
                     "Registration Open"
                 ]
-            }
+            },
+            date: { $gte: now },
+            registrationEndDate: { $gt: now }
         }).sort({
             date: 1
         });
@@ -41,6 +45,8 @@ exports.getEventById = async (
 ) => {
 
     try {
+
+        await closeExpiredRegistrations();
 
         const event =
             await Event.findById(
@@ -79,6 +85,8 @@ exports.getAdminEvents = async (
 ) => {
 
     try {
+
+        await closeExpiredRegistrations();
 
         const events =
             await Event.find({})
@@ -565,6 +573,8 @@ exports.updateEvent = async (
 ) => {
 
     try {
+
+        await closeExpiredRegistrations();
 
         const event =
             await Event.findById(

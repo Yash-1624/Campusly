@@ -148,10 +148,10 @@ exports.createCategory = async (
          * If category already exists,
          * reactivate it.
          */
-        const existing =
-            await Category.findOne({
-                name: categoryName
-            });
+        const escapedName = categoryName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const existing = await Category.findOne({
+            name: new RegExp(`^${escapedName}$`, "i")
+        });
 
 
         if (existing) {

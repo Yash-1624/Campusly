@@ -4,12 +4,18 @@ import { Link, useParams } from "react-router-dom";
 import api from "../../services/api";
 import Loading from "../../components/Loading";
 import QRScanner from "../../components/QRScanner";
+import AdminPageHero from "../../components/AdminPageHero";
 
 export default function RegistrationDetails() {
     const { id } = useParams();
 
     const [data, setData] = useState(null);
     const [error, setError] = useState("");
+    const [editing, setEditing] = useState(false);
+    const [editError, setEditError] = useState("");
+    const [participationType, setParticipationType] = useState("Individual");
+    const [teamName, setTeamName] = useState("");
+    const [memberCount, setMemberCount] = useState(2);
 
     useEffect(() => {
         const loadRegistration = async () => {
@@ -19,6 +25,9 @@ export default function RegistrationDetails() {
                 );
 
                 setData(response.data.registration);
+                setParticipationType(response.data.registration.participation?.type || "Individual");
+                setTeamName(response.data.registration.participation?.teamName || "");
+                setMemberCount(response.data.registration.participation?.numberOfMembers || 2);
             } catch (err) {
                 setError(
                     err.response?.data?.message ||
@@ -31,6 +40,8 @@ export default function RegistrationDetails() {
             loadRegistration();
         }
     }, [id]);
+
+    const saveParticipation = async (event) => { event.preventDefault(); setEditError(""); try { const { data: updated } = await api.patch(`/registrations/${id}`, { participationType, teamName, numberOfMembers: memberCount }); setData(updated.registration); setEditing(false); } catch (err) { setEditError(err.response?.data?.message || "Could not update registration."); } };
 
     if (!data && !error) {
         return <Loading />;
@@ -49,25 +60,14 @@ export default function RegistrationDetails() {
     return (
         <main className="container admin-registration-page">
 
+            <AdminPageHero eyebrow="EVENT PARTICIPANTS" title="Registration Details" description={`Review the student, event, and payment information${data.event?.name ? ` for ${data.event.name}` : ""}.`} actions={<Link className="button primary" to="/control-center/registrations">All Registrations</Link>} />
+
             <div className="admin-registration-layout">
 
                 {/* ==========================================
             LEFT - REGISTRATION DETAILS
         ========================================== */}
                 <div className="card registration-details-card">
-
-                    <div className="page-heading">
-                        <div>
-                            <h1>
-                                Registration Details
-                            </h1>
-
-                            <p className="page-subtitle">
-                                View student registration and
-                                payment information.
-                            </p>
-                        </div>
-                    </div>
 
                     {/* Student Information */}
                     <div className="detail-section">
@@ -210,6 +210,8 @@ export default function RegistrationDetails() {
 
                     {/* Participation */}
                     <div className="detail-section">
+                        {! ["Cancelled", "Completed"].includes(data.registrationStatus) && <button type="button" className="button secondary" onClick={() => setEditing((value) => !value)}>{editing ? "Cancel edit" : "Edit registration"}</button>}
+                        {editing && <form className="registration-edit-form" onSubmit={saveParticipation}><label>Participation type<select value={participationType} onChange={(event) => setParticipationType(event.target.value)}><option>Individual</option>{data.event?.participationType?.team && <option>Team</option>}</select></label>{participationType === "Team" && <><label>Team name<input required value={teamName} onChange={(event) => setTeamName(event.target.value)} /></label><label>Team members<input type="number" min={data.event?.teamSettings?.minMembers || 2} max={data.event?.teamSettings?.maxMembers || 20} value={memberCount} onChange={(event) => setMemberCount(event.target.value)} /></label></>}<button className="button primary" type="submit">Save changes</button>{editError && <div className="alert error">{editError}</div>}</form>}
 
                         <h2>
                             Participation
@@ -269,7 +271,7 @@ export default function RegistrationDetails() {
                                     Payment Status
                                 </small>
 
-                                <strong>
+                                <strong className={`payment-state${String(data.payment.status || "").toLowerCase().includes("pending") ? " is-pending" : ""}`}>
                                     {data.payment.status}
                                 </strong>
                             </div>

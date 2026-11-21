@@ -71,10 +71,68 @@ const formatTicketDate = (value) => {
   if (!value) return "To be announced";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return escapeHtml(value);
-  return date.toLocaleString("en-IN", {
+  return `${date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "2-digit", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: true,
-  });
+  })} IST`;
+};
+
+const escapeCalendarText = (value = "") => String(value ?? "")
+  .replace(/\\/g, "\\\\")
+  .replace(/\r?\n/g, "\\n")
+  .replace(/,/g, "\\,")
+  .replace(/;/g, "\\;");
+
+const toCalendarUtc = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+};
+
+const createCalendarInvite = ({ email, studentName, event, registrationCode, ticketCode }) => {
+  const start = toCalendarUtc(event?.date);
+  if (!start) return null;
+  const end = toCalendarUtc(new Date(new Date(event.date).getTime() + 60 * 60 * 1000));
+  const now = toCalendarUtc(new Date());
+  const sender = process.env.SMTP_FROM || process.env.SMTP_USER || "campusly@example.invalid";
+  const senderEmail = sender.match(/<([^>]+)>/)?.[1] || sender;
+  const description = [
+    `Your Campusly registration is confirmed for ${event?.name || "College Event"}.`,
+    `Attendee: ${studentName}`,
+    `Registration ID: ${registrationCode}`,
+    `Ticket ID: ${ticketCode}`,
+    "Show the QR ticket attached to your confirmation email at the entrance.",
+  ].join("\\n");
+  const uid = `${String(ticketCode || registrationCode).replace(/[^a-zA-Z0-9.-]/g, "-")}@campusly`;
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "PRODID:-//Campusly//Event Confirmation//EN",
+    "VERSION:2.0",
+    "CALSCALE:GREGORIAN",
+    "METHOD:REQUEST",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${now}`,
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    "SEQUENCE:0",
+    "STATUS:CONFIRMED",
+    "TRANSP:OPAQUE",
+    `SUMMARY:${escapeCalendarText(event?.name || "Campus Event")}`,
+    `DESCRIPTION:${escapeCalendarText(description)}`,
+    `LOCATION:${escapeCalendarText(event?.location || "To be announced")}`,
+    `ORGANIZER;CN=Campusly:mailto:${senderEmail}`,
+    `ATTENDEE;RSVP=TRUE:mailto:${email}`,
+    "BEGIN:VALARM",
+    "TRIGGER:-PT30M",
+    "ACTION:DISPLAY",
+    `DESCRIPTION:${escapeCalendarText(`Campusly event starts in 30 minutes: ${event?.name || "Campus Event"}`)}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+  return `${lines.join("\r\n")}\r\n`;
 };
 
 const sendRegistrationConfirmationEmail = async ({
@@ -88,6 +146,7 @@ const sendRegistrationConfirmationEmail = async ({
   const studentName = student?.fullName || registration?.studentInformation?.fullName || "Student";
   const collegePid = student?.collegePid || registration?.studentInformation?.collegePid || ticket?.collegePid || "-";
   const eventName = event?.name || ticket?.eventName || "College Event";
+  const eventCategory = event?.category || "CAMPUS EVENT";
   const eventDate = formatTicketDate(event?.date);
   const venue = event?.location || "To be announced";
   const registrationCode = registration?.registrationId || "-";
@@ -111,13 +170,24 @@ const sendRegistrationConfirmationEmail = async ({
     });
   }
 
+  const calendarInvite = createCalendarInvite({ email, studentName, event, registrationCode, ticketCode });
+  if (calendarInvite) {
+    attachments.push({
+      filename: `${eventName.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "") || "campus-event"}.ics`,
+      content: Buffer.from(calendarInvite, "utf8"),
+      contentType: "text/calendar; charset=utf-8; method=REQUEST",
+      contentDisposition: "attachment",
+    });
+  }
+
   const ticketMarkup = qrAvailable
     ? `
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e4e7f0;border-radius:18px;overflow:hidden">
         <tr>
           <td width="66%" valign="top" style="width:66%;padding:30px 28px;background:#24215f;background-image:linear-gradient(135deg,#17183f,#39319a);color:#ffffff">
-            <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;letter-spacing:1.2px;font-weight:800;color:#c9c7ff">CAMPUSLY&nbsp;&nbsp; / &nbsp;&nbsp;OFFICIAL EVENT PASS</div>
-            <div style="font-family:Arial,Helvetica,sans-serif;font-size:30px;line-height:1.15;font-weight:800;color:#ffffff;padding:22px 0 24px">${escapeHtml(eventName)}</div>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;letter-spacing:1.2px;font-weight:800;color:#c9c7ff"><span style="display:inline-block;padding:3px 7px;border:1px solid rgba(255,255,255,.35);border-radius:6px;margin-right:7px">✦</span>CAMPUSLY&nbsp;&nbsp; / &nbsp;&nbsp;OFFICIAL EVENT PASS</div>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1.6px;font-weight:800;color:#bdb8ff;padding-top:17px">${escapeHtml(eventCategory).toUpperCase()}</div>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:30px;line-height:1.15;font-weight:800;color:#ffffff;padding:7px 0 19px">${escapeHtml(eventName)}</div>
             <div style="height:1px;background:#7774bd;font-size:1px;line-height:1px">&nbsp;</div>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px">
               <tr>
@@ -142,7 +212,7 @@ const sendRegistrationConfirmationEmail = async ({
               </tr>
               ${teamDetails ? `<tr><td colspan="2">${teamDetails}</td></tr>` : ""}
             </table>
-            <div style="padding-top:24px;color:#c8c9f4;font-size:11px;font-weight:700;letter-spacing:.3px">REGISTRATION&nbsp; ${escapeHtml(registrationCode)}</div>
+            <div style="padding-top:24px;color:#aaa9d4;font-size:9px;font-weight:800;letter-spacing:1.3px">BOOKING REF&nbsp; <span style="color:#eceaff;letter-spacing:.2px">${escapeHtml(registrationCode)}</span></div>
           </td>
           <td width="34%" valign="top" align="center" style="width:34%;padding:28px 16px;background:#fbfbff;color:#202344;border-left:2px dashed #a6a3dc">
             <div style="font-family:Arial,Helvetica,sans-serif;color:#198754;font-size:12px;font-weight:800;letter-spacing:.6px">VALID FOR ENTRY</div>
@@ -159,7 +229,11 @@ const sendRegistrationConfirmationEmail = async ({
 
   const text = [
     `Hello ${studentName},`,
-    "Your event registration is confirmed. Keep this email ready for entry.",
+    qrAvailable
+      ? "You're confirmed! Your official Campusly event pass is included below, with the QR ticket attached for entry."
+      : "You're confirmed! Your official Campusly event pass is included below. Please contact the event administrator for your QR ticket.",
+    calendarInvite ? "Your calendar invite is attached as an .ics file. Open it and save the event to your calendar." : "",
+    "We look forward to seeing you there.",
     `Event: ${eventName}`,
     `Date & time: ${eventDate}`,
     `Venue: ${venue}`,
@@ -188,11 +262,16 @@ const sendRegistrationConfirmationEmail = async ({
               <div style="font-size:22px;font-weight:900;letter-spacing:-.5px;color:#5145cd">Campusly</div>
               <div style="font-size:12px;color:#747994;padding-top:5px">EVENT REGISTRATION CONFIRMATION</div>
             </td></tr>
+            <tr><td style="padding:0 12px 20px;color:#616b82;font-size:14px;line-height:1.7;text-align:center">
+              <strong style="display:block;color:#252a43;font-size:20px;padding-bottom:4px">You’re confirmed, ${escapeHtml(studentName)}!</strong>
+              Your official event pass is ready below. ${calendarInvite ? "Save the attached calendar invite." : "The event date will be announced soon."} ${qrAvailable ? "Show your QR code at check-in." : "Contact the event administrator if you need help with your entry pass."}
+            </td></tr>
             <tr><td style="padding:0">
               ${ticketMarkup}
             </td></tr>
             <tr><td style="padding:22px 8px 0;color:#6e748b;font-size:12px;line-height:1.7;text-align:center">
               <strong style="color:#303451">Payment:</strong> ${escapeHtml(paymentStatus)} &nbsp; | &nbsp; <strong style="color:#303451">Amount:</strong> ${escapeHtml(amount)}<br>
+              ${calendarInvite ? "Your calendar invite is attached as an .ics file. Open it and choose Add to calendar." : ""}<br>
               Please do not share your QR code. Each ticket can be used for entry only once.<br>
               If you need assistance, contact your event administrator.
             </td></tr>

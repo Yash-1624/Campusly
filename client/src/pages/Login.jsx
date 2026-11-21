@@ -84,10 +84,47 @@ export default function Login({ adminMode = false, volunteerMode = false }) {
         event.currentTarget.style.removeProperty("--login-glow-y");
     };
 
+    const tiltAdminBoard = (event) => {
+        if (event.pointerType !== "mouse") return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+        const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+        event.currentTarget.style.setProperty("--board-tilt-x", `${y * -7}deg`);
+        event.currentTarget.style.setProperty("--board-tilt-y", `${x * 9}deg`);
+        event.currentTarget.style.setProperty("--board-glow-x", `${(x + 0.5) * 100}%`);
+        event.currentTarget.style.setProperty("--board-glow-y", `${(y + 0.5) * 100}%`);
+        event.currentTarget.classList.add("is-tilting");
+    };
+
+    const resetAdminBoard = (event) => {
+        event.currentTarget.classList.remove("is-tilting");
+        ["--board-tilt-x", "--board-tilt-y", "--board-glow-x", "--board-glow-y"].forEach((property) => event.currentTarget.style.removeProperty(property));
+    };
+
     return (
-        <div className={`auth-page${!adminMode && !volunteerMode ? " auth-page-student" : ""}`}>
+        <div className={`auth-page${adminMode ? " auth-page-admin" : !adminMode && !volunteerMode ? " auth-page-student" : ""}`}>
+            {adminMode && <aside className="admin-auth-showcase" aria-label="Admin workspace introduction">
+                <span className="admin-auth-orbit admin-auth-orbit-one" aria-hidden="true" />
+                <span className="admin-auth-orbit admin-auth-orbit-two" aria-hidden="true" />
+                <p className="admin-auth-kicker"><span /> CAMPUSLY CONTROL CENTER</p>
+                <h2>Make every<br />campus moment<br /><em>count.</em></h2>
+                <p className="admin-auth-copy">Your events, people, and activity — all in one place.</p>
+                <div className="admin-control-preview" onPointerMove={tiltAdminBoard} onPointerLeave={resetAdminBoard} aria-label="Interactive preview of the admin dashboard">
+                    <div className="admin-preview-board">
+                        <div className="admin-preview-topbar"><span className="admin-preview-brand-mark">C</span><strong>Campusly</strong><span className="admin-preview-live"><i /> LIVE</span><span className="admin-preview-avatar">A</span></div>
+                        <div className="admin-preview-content">
+                            <div className="admin-preview-greeting"><span>MONDAY, NOVEMBER 21</span><strong>Your campus<br />is in motion.</strong><small>Everything happening, at a glance.</small><b>↗</b></div>
+                            <div className="admin-preview-stats"><div><span className="preview-stat-icon violet">✳</span><small>EVENTS</small><strong>12</strong><i>+3 this month</i></div><div><span className="preview-stat-icon blue">♧</span><small>STUDENTS</small><strong>248</strong><i>+18 this week</i></div><div><span className="preview-stat-icon mint">▱</span><small>TICKETS</small><strong>86</strong><i>On track</i></div></div>
+                            <div className="admin-preview-bottom"><div className="preview-activity"><span>WEEKLY ACTIVITY</span><strong>Engagement is up <b>18%</b></strong><div className="preview-bars"><i/><i/><i/><i/><i/><i/><i/></div></div><div className="preview-next-event"><span className="preview-event-art">✦</span><span><small>UP NEXT</small><strong>Diwali Night</strong><i>Today · 6:30 PM</i></span><b>↗</b></div></div>
+                        </div>
+                    </div>
+                    <span className="admin-preview-float float-registrations"><b>↗</b><span><strong>+24</strong><small>registrations</small></span></span>
+                    <span className="admin-preview-float float-live"><i /> Events are live</span>
+                </div>
+                <div className="admin-auth-foot"><span className="admin-auth-foot-icon">✦</span><span><strong>One clear view</strong><small>Run your campus events with confidence</small></span><span className="admin-auth-foot-arrow">↗</span></div>
+            </aside>}
             {!adminMode && !volunteerMode && <AuthShowcase mode="login" />}
-            <form className={`form-card${!adminMode && !volunteerMode ? " login-card-3d" : ""}`} onSubmit={submit} onPointerMove={tiltLoginCard} onPointerLeave={resetLoginCard} noValidate autoComplete="on">
+            <form className={`form-card${!adminMode && !volunteerMode ? " login-card-3d" : adminMode ? " admin-login-card" : ""}`} onSubmit={submit} onPointerMove={tiltLoginCard} onPointerLeave={resetLoginCard} noValidate autoComplete="on">
                 <p className="login-brand-name">Campusly</p>
                 <p className="login-eyebrow">{adminMode ? "ADMINISTRATOR ACCESS" : volunteerMode ? "VOLUNTEER ACCESS" : "CAMPUS EVENTS, ALL IN ONE PLACE"}</p>
                 <h1>{adminMode ? "Administrator Sign In" : volunteerMode ? "Volunteer Sign In" : "Welcome back"}</h1>

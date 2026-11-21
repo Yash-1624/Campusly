@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../../services/api";
+import AdminPageHero from "../../components/AdminPageHero";
 
 const getEvent = (payment) =>
     payment?.event || payment?.registration?.event || null;
 
 const getStudent = (payment) => payment?.student || null;
+const getEventKey = (event) => event?._id || event?.name || `${event?.category || "event"}:${event?.date || "unknown"}`;
 
 const getStatus = (payment) => {
     const value = String(payment?.status || "Unknown").toLowerCase();
@@ -80,6 +82,8 @@ export default function ManagePayments() {
     const [payments, setPayments] = useState([]);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [eventFilter, setEventFilter] = useState("all");
+    const [categoryFilter, setCategoryFilter] = useState("all");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -117,6 +121,9 @@ export default function ManagePayments() {
         loadPayments();
     }, [loadPayments]);
 
+    const categories = useMemo(() => [...new Set(payments.map((payment) => getEvent(payment)?.category || "Uncategorized"))].sort((a, b) => a.localeCompare(b)), [payments]);
+    const events = useMemo(() => [...new Map(payments.map((payment) => getEvent(payment)).filter(Boolean).map((event) => [getEventKey(event), event])).values()].sort((a, b) => (a.name || "Event unavailable").localeCompare(b.name || "Event unavailable")), [payments]);
+
     const filteredPayments = useMemo(() => {
         const query = search.trim().toLowerCase();
 
@@ -150,9 +157,22 @@ export default function ManagePayments() {
             const matchesStatus =
                 statusFilter === "all" || getStatus(payment) === statusFilter;
 
-            return matchesSearch && matchesStatus;
+            const matchesEvent = eventFilter === "all" || getEventKey(event) === eventFilter;
+            const matchesCategory = categoryFilter === "all" || (event?.category || "Uncategorized") === categoryFilter;
+            return matchesSearch && matchesStatus && matchesEvent && matchesCategory;
         });
-    }, [payments, search, statusFilter]);
+    }, [payments, search, statusFilter, eventFilter, categoryFilter]);
+
+    const groupedPayments = useMemo(() => {
+        const groups = new Map();
+        filteredPayments.forEach((payment) => {
+            const event = getEvent(payment);
+            const key = getEventKey(event);
+            if (!groups.has(key)) groups.set(key, { event, payments: [] });
+            groups.get(key).payments.push(payment);
+        });
+        return [...groups.values()].sort((a, b) => (a.event?.name || "Event unavailable").localeCompare(b.event?.name || "Event unavailable"));
+    }, [filteredPayments]);
 
     const stats = useMemo(() => {
         const successful = payments.filter(
@@ -181,23 +201,7 @@ export default function ManagePayments() {
 
     return (
         <main className="payments-page">
-            <header className="payments-header">
-                <div>
-                    <h1 className="payments-title">Manage Payments</h1>
-                    <p className="payments-subtitle">
-                        Review transactions, registration details, and payment statuses.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    className="button primary payments-refresh"
-                    onClick={loadPayments}
-                    disabled={loading}
-                >
-                    {loading ? "Refreshing..." : "↻ Refresh Payments"}
-                </button>
-            </header>
+            <AdminPageHero eyebrow="PAYMENT CENTER" title="Manage Payments" description="Review transactions, registration details, and payment statuses." actions={<button type="button" className="button primary payments-refresh" onClick={loadPayments} disabled={loading}>{loading ? "Refreshing..." : "Refresh Payments"}</button>} />
 
             <section className="payments-stats" aria-label="Payment statistics">
                 <article className="payment-stat-card total">
@@ -210,7 +214,7 @@ export default function ManagePayments() {
                     <strong className="payment-stat-value">{stats.successful}</strong>
                 </article>
 
-                <article className="payment-stat-card pending">
+                    <article className="payment-stat-card pending">
                     <span className="payment-stat-label">Pending</span>
                     <strong className="payment-stat-value">{stats.pending}</strong>
                 </article>
@@ -235,6 +239,10 @@ export default function ManagePayments() {
                                 onChange={(event) => setSearch(event.target.value)}
                             />
                         </div>
+
+                        <select className="payments-status-filter" aria-label="Filter payments by category" value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setEventFilter("all"); }}><option value="all">All categories</option>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select>
+
+                        <select className="payments-status-filter" aria-label="Filter by event" value={eventFilter} onChange={(event) => setEventFilter(event.target.value)}><option value="all">All events</option>{events.filter((item) => categoryFilter === "all" || (item.category || "Uncategorized") === categoryFilter).map((event) => <option key={getEventKey(event)} value={getEventKey(event)}>{event.name || "Event unavailable"}</option>)}</select>
 
                         <select
                             className="payments-status-filter"
@@ -273,108 +281,48 @@ export default function ManagePayments() {
                     </div>
                 ) : (
                     <>
-                        <div className="payments-table-wrap">
-                            <table className="payments-table">
-                                <thead>
-                                    <tr>
-                                        <th>Transaction</th>
-                                        <th>Registration</th>
-                                        <th>Student</th>
-                                        <th>Event</th>
-                                        <th>Amount</th>
-                                        <th>Method / Gateway</th>
-                                        <th>Status</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    {filteredPayments.map((payment) => {
-                                        const student = getStudent(payment);
-                                        const event = getEvent(payment);
-                                        const status = getStatus(payment);
-
-                                        return (
-                                            <tr key={payment?._id || getTransactionId(payment)}>
-                                                <td>
-                                                    <span className="payment-primary-text">
-                                                        {getTransactionId(payment)}
-                                                    </span>
-                                                    {payment?.razorpayOrderId && (
-                                                        <span className="payment-secondary-text">
-                                                            Order: {payment.razorpayOrderId}
-                                                        </span>
-                                                    )}
-                                                </td>
-
-                                                <td>
-                                                    <span className="payment-primary-text">
-                                                        {getRegistrationId(payment)}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    <span className="payment-primary-text">
-                                                        {student?.fullName || student?.name || "Unknown student"}
-                                                    </span>
-                                                    <span className="payment-secondary-text">
-                                                        {student?.email || "No email"}
-                                                    </span>
-                                                    {student?.collegePid && (
-                                                        <span className="payment-secondary-text">
-                                                            PID: {student.collegePid}
-                                                        </span>
-                                                    )}
-                                                </td>
-
-                                                <td>
-                                                    <span className="payment-primary-text">
-                                                        {event?.name || "Event unavailable"}
-                                                    </span>
-                                                    {event?.category && (
-                                                        <span className="payment-secondary-text">
-                                                            {event.category}
-                                                        </span>
-                                                    )}
-                                                </td>
-
-                                                <td>
-                                                    <span className="payment-amount">
-                                                        {formatCurrency(payment?.amount, payment?.currency)}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    <span className="payment-primary-text">
-                                                        {payment?.paymentMethod || "—"}
-                                                    </span>
-                                                    <span className="payment-secondary-text">
-                                                        Gateway: {payment?.gateway || "—"}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    <span className={`payment-status ${status}`}>
-                                                        {displayStatus(payment)}
-                                                    </span>
-                                                </td>
-
-                                                <td>{formatDate(payment?.createdAt || payment?.updatedAt)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                        <div className="payment-event-groups">
+                            {groupedPayments.map(({ event, payments: eventPayments }) => {
+                                const successfulTotal = eventPayments.filter((payment) => getStatus(payment) === "successful").reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+                                return (
+                                    <section className="payment-event-group" key={getEventKey(event)}>
+                                        <header className="payment-event-group-heading">
+                                            <div>
+                                                <h3>{event?.name || "Event unavailable"}</h3>
+                                                <span>{event?.category || "Uncategorized"}</span>
+                                            </div>
+                                            <div className="payment-event-group-summary">
+                                                <strong>{eventPayments.length} {eventPayments.length === 1 ? "payment" : "payments"}</strong>
+                                                <small>{formatCurrency(successfulTotal)} successful</small>
+                                            </div>
+                                        </header>
+                                        <div className="payments-table-wrap">
+                                            <table className="payments-table">
+                                                <thead><tr><th>Transaction</th><th>Registration</th><th>Student</th><th>Amount</th><th>Method / Gateway</th><th>Status</th><th>Date</th></tr></thead>
+                                                <tbody>{eventPayments.map((payment) => {
+                                                    const student = getStudent(payment);
+                                                    const status = getStatus(payment);
+                                                    return (
+                                                        <tr key={payment?._id || getTransactionId(payment)}>
+                                                            <td><span className="payment-primary-text">{getTransactionId(payment)}</span>{payment?.razorpayOrderId && <span className="payment-secondary-text">Order: {payment.razorpayOrderId}</span>}</td>
+                                                            <td><span className="payment-primary-text">{getRegistrationId(payment)}</span></td>
+                                                            <td><span className="payment-primary-text">{student?.fullName || student?.name || "Unknown student"}</span><span className="payment-secondary-text">{student?.email || "No email"}</span>{student?.collegePid && <span className="payment-secondary-text">PID: {student.collegePid}</span>}</td>
+                                                            <td><span className="payment-amount">{formatCurrency(payment?.amount, payment?.currency)}</span></td>
+                                                            <td><span className="payment-primary-text">{payment?.paymentMethod || "?"}</span><span className="payment-secondary-text">Gateway: {payment?.gateway || "?"}</span></td>
+                                                            <td><span className={`payment-status ${status}`}>{displayStatus(payment)}</span></td>
+                                                            <td>{formatDate(payment?.createdAt || payment?.updatedAt)}</td>
+                                                        </tr>
+                                                    );
+                                                })}</tbody>
+                                            </table>
+                                        </div>
+                                    </section>
+                                );
+                            })}
                         </div>
-
                         <footer className="payments-table-footer">
-                            <span>
-                                Showing {filteredPayments.length} of {payments.length} payments
-                            </span>
-                            <span>
-                                Successful amount:{" "}
-                                <strong>{formatCurrency(stats.successfulAmount)}</strong>
-                            </span>
+                            <span>Showing {filteredPayments.length} of {payments.length} payments</span>
+                            <span>Successful amount: <strong>{formatCurrency(stats.successfulAmount)}</strong></span>
                         </footer>
                     </>
                 )}
