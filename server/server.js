@@ -25,36 +25,48 @@ const allowedOrigins = [
     "https://college-event-management-system-lyart.vercel.app"
 ];
 
-app.use(
-    cors({
-        origin: (origin, callback) => {
-            // Allow requests without an Origin header
-            // and requests from approved frontend URLs
-            if (!origin || allowedOrigins.includes(origin)) {
-                return callback(null, true);
-            }
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests without Origin header
+        // Allow approved frontend URLs
+        // Allow matching Vercel deployment preview URLs
 
-            return callback(
-                new Error("Not allowed by CORS: " + origin)
-            );
-        },
-        credentials: true,
-        methods: [
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE",
-            "OPTIONS"
-        ],
-        allowedHeaders: [
-            "Content-Type",
-            "Authorization"
-        ]
-    })
-);
+        if (
+            !origin ||
+            allowedOrigins.includes(origin) ||
+            /^https:\/\/college-event-management-system-[a-z0-9-]+-yash-1624s-projects\.vercel\.app$/.test(origin)
+        ) {
+            return callback(null, true);
+        }
 
-// Parse JSON request body
+        console.error("Not allowed by CORS:", origin);
+
+        return callback(new Error("Not allowed by CORS: " + origin));
+    },
+
+    credentials: true,
+
+    methods: [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+    ],
+
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization"
+    ]
+};
+
+app.use(cors(corsOptions));
+
+// ========================================
+// BODY PARSER
+// ========================================
+
 app.use(express.json({ limit: "5mb" }));
 
 // ========================================
@@ -74,8 +86,10 @@ const closeExpiredEventRegistrations = () => {
 // ROUTES
 // ========================================
 
-// Authentication
+// Analytics
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
+
+// Authentication
 app.use("/api/auth", require("./routes/authRoutes"));
 
 // Student Profile
@@ -129,7 +143,7 @@ app.use((req, res) => {
 // ========================================
 
 app.use((err, req, res, next) => {
-    console.error("Server Error:", err);
+    console.error("Server Error:", err.message);
 
     res.status(err.status || 500).json({
         success: false,
@@ -161,6 +175,10 @@ const startServer = async () => {
         eventRegistrationClosureTimer.unref();
 
         app.listen(PORT, () => {
+            console.log("------------------------------------");
+            console.log("COLLEGE EVENT MANAGEMENT SERVER");
+            console.log("------------------------------------");
+
             console.log(`Server running on port ${PORT}`);
 
             console.log(
@@ -168,6 +186,7 @@ const startServer = async () => {
                 allowedOrigins.join(", ")
             );
 
+            // Razorpay configuration
             console.log(
                 `Razorpay Key ID loaded: ${process.env.RAZORPAY_KEY_ID ? "YES" : "NO"
                 }`
@@ -177,6 +196,24 @@ const startServer = async () => {
                 `Razorpay Secret loaded: ${process.env.RAZORPAY_KEY_SECRET ? "YES" : "NO"
                 }`
             );
+
+            // Brevo email configuration
+            console.log(
+                `Brevo API Key loaded: ${process.env.BREVO_API_KEY ? "YES" : "NO"
+                }`
+            );
+
+            console.log(
+                `Brevo Sender Email loaded: ${process.env.BREVO_SENDER_EMAIL ? "YES" : "NO"
+                }`
+            );
+
+            console.log(
+                `Brevo Sender Name: ${process.env.BREVO_SENDER_NAME || "Campusly"
+                }`
+            );
+
+            console.log("------------------------------------");
         });
     } catch (error) {
         console.error("SERVER STARTUP ERROR:", error.message);

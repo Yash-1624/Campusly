@@ -887,8 +887,11 @@ exports.getCurrentUser = (req, res) => {
 // FORGOT PASSWORD
 // =====================================================
 
+
 exports.forgotPassword = async (req, res) => {
     try {
+        console.log("FORGOT PASSWORD: Request received");
+
         const { email } = req.body;
 
         if (!email) {
@@ -902,6 +905,8 @@ exports.forgotPassword = async (req, res) => {
             .trim()
             .toLowerCase();
 
+        console.log("FORGOT PASSWORD: Checking user");
+
         const user = await User.findOne({
             email: normalizedEmail
         });
@@ -913,43 +918,39 @@ exports.forgotPassword = async (req, res) => {
             });
         }
 
+        console.log("FORGOT PASSWORD: User found");
+
         const otp = generateOTP();
 
         user.otp = otp;
-
         user.otpExpiresAt = new Date(
             Date.now() + 10 * 60 * 1000
         );
 
         await user.save();
 
-        // OTP is sent by email only
-        await sendPasswordResetOTP(
-            normalizedEmail,
-            otp
-        );
+        console.log("FORGOT PASSWORD: OTP saved");
+        console.log("FORGOT PASSWORD: Sending email");
 
-        // IMPORTANT:
-        // Do NOT return otp here.
+        await sendPasswordResetOTP(normalizedEmail, otp);
+
+        console.log("FORGOT PASSWORD: Email sent successfully");
+
         return res.status(200).json({
             success: true,
-            message:
-                "Password reset OTP has been sent to your email."
+            message: "Password reset OTP has been sent to your email."
         });
 
     } catch (error) {
-        console.error(
-            "FORGOT PASSWORD ERROR:",
-            error
-        );
+        console.error("FORGOT PASSWORD ERROR:", error);
 
         return res.status(500).json({
             success: false,
-            message:
-                "Unable to process password reset request."
+            message: "Unable to process password reset request."
         });
     }
 };
+
 
 
 // =====================================================

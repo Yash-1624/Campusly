@@ -95,7 +95,7 @@ const createCalendarInvite = ({ email, studentName, event, registrationCode, tic
   if (!start) return null;
   const end = toCalendarUtc(new Date(new Date(event.date).getTime() + 60 * 60 * 1000));
   const now = toCalendarUtc(new Date());
-  const sender = process.env.SMTP_FROM || process.env.SMTP_USER || "campusly@example.invalid";
+  const sender = process.env.BREVO_SENDER_EMAIL;
   const senderEmail = sender.match(/<([^>]+)>/)?.[1] || sender;
   const description = [
     `Your Campusly registration is confirmed for ${event?.name || "College Event"}.`,
