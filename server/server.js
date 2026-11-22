@@ -1,3 +1,4 @@
+
 const dotenv = require("dotenv");
 
 // Load environment variables FIRST
@@ -9,48 +10,65 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const { closeExpiredRegistrations } = require("./services/eventLifecycle");
 
-
-// ========================================
-// DATABASE CONNECTION
-// ========================================
-
-const closeExpiredEventRegistrations = () => {
-    closeExpiredRegistrations().catch((error) => {
-        console.error("EVENT REGISTRATION CLOSURE ERROR:", error.message);
-    });
-};
-
-connectDB().then(() => {
-    closeExpiredEventRegistrations();
-    const eventRegistrationClosureTimer = setInterval(closeExpiredEventRegistrations, 30_000);
-    eventRegistrationClosureTimer.unref();
-});
-
-
 // ========================================
 // CREATE EXPRESS APP
 // ========================================
 
 const app = express();
 
+// ========================================
+// CORS CONFIGURATION
+// ========================================
 
-// ========================================
-// MIDDLEWARE
-// ========================================
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://college-event-management-system-lyart.vercel.app"
+];
 
 app.use(
     cors({
-        origin:
-            process.env.CLIENT_URL ||
-            "http://localhost:5173",
+        origin: (origin, callback) => {
+            // Allow requests without an Origin header
+            // and requests from approved frontend URLs
+            if (!origin || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
 
-        credentials: true
+            return callback(
+                new Error("Not allowed by CORS: " + origin)
+            );
+        },
+        credentials: true,
+        methods: [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS"
+        ],
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization"
+        ]
     })
 );
 
 // Parse JSON request body
 app.use(express.json({ limit: "5mb" }));
 
+// ========================================
+// DATABASE CONNECTION & EVENT LIFECYCLE
+// ========================================
+
+const closeExpiredEventRegistrations = () => {
+    closeExpiredRegistrations().catch((error) => {
+        console.error(
+            "EVENT REGISTRATION CLOSURE ERROR:",
+            error.message
+        );
+    });
+};
 
 // ========================================
 // ROUTES
@@ -58,59 +76,31 @@ app.use(express.json({ limit: "5mb" }));
 
 // Authentication
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
-
-app.use(
-    "/api/auth",
-    require("./routes/authRoutes")
-);
+app.use("/api/auth", require("./routes/authRoutes"));
 
 // Student Profile
-app.use(
-    "/api/profile",
-    require("./routes/profileRoutes")
-);
+app.use("/api/profile", require("./routes/profileRoutes"));
 
 // Events
-app.use(
-    "/api/events",
-    require("./routes/eventRoutes")
-);
+app.use("/api/events", require("./routes/eventRoutes"));
 
 // Event Categories
-app.use(
-    "/api/categories",
-    require("./routes/categoryRoutes")
-);
+app.use("/api/categories", require("./routes/categoryRoutes"));
 
 // Event Registrations
-app.use(
-    "/api/registrations",
-    require("./routes/registrationRoutes")
-);
+app.use("/api/registrations", require("./routes/registrationRoutes"));
 
 // Payments / Razorpay
-app.use(
-    "/api/payments",
-    require("./routes/paymentRoutes")
-);
+app.use("/api/payments", require("./routes/paymentRoutes"));
 
 // Admin
-app.use(
-    "/api/admin",
-    require("./routes/adminRoutes")
-);
+app.use("/api/admin", require("./routes/adminRoutes"));
 
 // Tickets / QR Scanner
-app.use(
-    "/api/tickets",
-    require("./routes/ticketRoutes")
-);
+app.use("/api/tickets", require("./routes/ticketRoutes"));
 
-app.use(
-    "/api/volunteer",
-    require("./routes/volunteerRoutes")
-);
-
+// Volunteer
+app.use("/api/volunteer", require("./routes/volunteerRoutes"));
 
 // ========================================
 // API TEST ROUTE
@@ -119,11 +109,9 @@ app.use(
 app.get("/", (req, res) => {
     res.status(200).json({
         success: true,
-        message:
-            "College Event Management API is running"
+        message: "College Event Management API is running"
     });
 });
-
 
 // ========================================
 // 404 ROUTE
@@ -136,67 +124,64 @@ app.use((req, res) => {
     });
 });
 
-
 // ========================================
 // GLOBAL ERROR HANDLER
 // ========================================
 
 app.use((err, req, res, next) => {
+    console.error("Server Error:", err);
 
-    console.error(
-        "Server Error:",
-        err
-    );
-
-    res.status(
-        err.status || 500
-    ).json({
-
+    res.status(err.status || 500).json({
         success: false,
-
-        message:
-            err.message ||
-            "Internal server error"
+        message: err.message || "Internal server error"
     });
 });
 
-
 // ========================================
-// START SERVER
+// START SERVER AFTER DATABASE CONNECTION
 // ========================================
 
-const PORT =
-    process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
-app.listen(
-    PORT,
-    () => {
+const startServer = async () => {
+    try {
+        await connectDB();
 
-        console.log(
-            `Server running on http://localhost:${PORT}`
+        console.log("Database connection established");
+
+        // Check expired event registrations
+        closeExpiredEventRegistrations();
+
+        // Automatically check every 30 seconds
+        const eventRegistrationClosureTimer = setInterval(
+            closeExpiredEventRegistrations,
+            30_000
         );
 
-        console.log(
-            `Client URL: ${
-                process.env.CLIENT_URL ||
-                "http://localhost:5173"
-            }`
-        );
+        eventRegistrationClosureTimer.unref();
 
-        console.log(
-            `Razorpay Key ID loaded: ${
-                process.env.RAZORPAY_KEY_ID
-                    ? "YES"
-                    : "NO"
-            }`
-        );
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
 
-        console.log(
-            `Razorpay Secret loaded: ${
-                process.env.RAZORPAY_KEY_SECRET
-                    ? "YES"
-                    : "NO"
-            }`
-        );
+            console.log(
+                "Allowed frontend origins:",
+                allowedOrigins.join(", ")
+            );
+
+            console.log(
+                `Razorpay Key ID loaded: ${process.env.RAZORPAY_KEY_ID ? "YES" : "NO"
+                }`
+            );
+
+            console.log(
+                `Razorpay Secret loaded: ${process.env.RAZORPAY_KEY_SECRET ? "YES" : "NO"
+                }`
+            );
+        });
+    } catch (error) {
+        console.error("SERVER STARTUP ERROR:", error.message);
+        process.exit(1);
     }
-);
+};
+
+startServer();
