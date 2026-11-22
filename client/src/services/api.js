@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "=https://college-event-management-1-lboz.onrender.com/api",
+    baseURL: import.meta.env.VITE_API_URL || "https://college-event-management-1-lboz.onrender.com/api",
     timeout: 60000,
 });
 
