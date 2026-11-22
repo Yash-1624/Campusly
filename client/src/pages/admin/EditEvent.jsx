@@ -5,6 +5,7 @@ import AdminPageHero from "../../components/AdminPageHero";
 
 function formatDateTimeLocal(value) {
 
+
     if (!value) {
         return "";
     }
@@ -41,6 +42,16 @@ function formatDateTimeLocal(value) {
 
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
+
+const toApiDateTime = (value) => {
+    if (!value) return value;
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+        ? value
+        : date.toISOString();
+};
 
 const EditEvent = () => {
     const { id } = useParams();
@@ -374,82 +385,49 @@ const EditEvent = () => {
             // ========================================
 
             const payload = {
+                name: formData.name.trim(),
+                description: formData.description.trim(),
+                category: formData.category.trim(),
 
-                name:
-                    formData.name.trim(),
+                // Convert local datetime values into UTC ISO timestamps
+                date: toApiDateTime(formData.date),
 
-                description:
-                    formData.description.trim(),
+                location: formData.location.trim(),
 
-                /*
-                 * IMPORTANT:
-                 *
-                 * Category is now a TEXT value.
-                 * No hard-coded dropdown values.
-                 */
+                registrationStartDate: toApiDateTime(
+                    formData.registrationStartDate
+                ),
 
-                category:
-                    formData.category.trim(),
-
-                date:
-                    formData.date,
-
-                location:
-                    formData.location.trim(),
-
-                registrationStartDate:
-                    formData.registrationStartDate,
-
-                registrationEndDate:
-                    formData.registrationEndDate,
+                registrationEndDate: toApiDateTime(
+                    formData.registrationEndDate
+                ),
 
                 participationType: {
-
-                    individual:
-                        Boolean(
-                            formData
-                                .participationType
-                                .individual
-                        ),
-
-                    team:
-                        Boolean(
-                            formData
-                                .participationType
-                                .team
-                        )
-
+                    individual: Boolean(
+                        formData.participationType.individual
+                    ),
+                    team: Boolean(
+                        formData.participationType.team
+                    )
                 },
 
                 teamSettings: {
-
-                    minMembers:
-                        Number(
-                            formData
-                                .teamSettings
-                                .minMembers
-                        ) || 2,
-
-                    maxMembers:
-                        Number(
-                            formData
-                                .teamSettings
-                                .maxMembers
-                        ) || 5
-
+                    enabled: Boolean(
+                        formData.participationType.team
+                    ),
+                    minMembers: Number(
+                        formData.teamSettings.minMembers
+                    ) || 2,
+                    maxMembers: Number(
+                        formData.teamSettings.maxMembers
+                    ) || 5
                 },
 
-                fee:
-                    Number(
-                        formData.fee
-                    ) || 0,
-
-                status:
-                    formData.status,
+                fee: Number(formData.fee) || 0,
+                status: formData.status,
 
                 imageUrl,
                 removeImage
-
             };
 
 

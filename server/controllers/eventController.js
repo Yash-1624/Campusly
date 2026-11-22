@@ -2,6 +2,20 @@ const Event = require("../models/Event");
 const Category = require("../models/Category");
 const { closeExpiredRegistrations } = require("../services/eventLifecycle");
 
+// Convert and validate event date values.
+// Frontend sends ISO timestamps with timezone information.
+const parseEventDate = (value) => {
+    if (!value) return null;
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return date;
+};
+
 // ========================================
 // GET EVENTS FOR STUDENTS
 // ========================================
@@ -310,18 +324,29 @@ exports.createEvent = async (
         // VALIDATE DATES
         // ========================================
 
-        const startDate =
-            new Date(
-                registrationStartDate
-            );
+        const startDate = parseEventDate(
+            registrationStartDate
+        );
 
-        const endDate =
-            new Date(
-                registrationEndDate
-            );
+        const endDate = parseEventDate(
+            registrationEndDate
+        );
 
-        const eventDate =
-            new Date(date);
+        const eventDate = parseEventDate(date);
+
+        if (!startDate || !endDate || !eventDate) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide valid event and registration dates."
+            });
+        }
+
+        if (startDate >= endDate) {
+            return res.status(400).json({
+                success: false,
+                message: "Registration start date must be before registration end date."
+            });
+        }
 
 
         if (
@@ -596,6 +621,45 @@ exports.updateEvent = async (
         const body = {
             ...req.body
         };
+
+        // Convert incoming date values into valid Date objects.
+        const dateFields = [
+            "date",
+            "registrationStartDate",
+            "registrationEndDate"
+        ];
+
+        for (const field of dateFields) {
+            if (body[field] !== undefined) {
+                const parsedDate = parseEventDate(body[field]);
+
+                if (!parsedDate) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Invalid ${field} value.`
+                    });
+                }
+
+                body[field] = parsedDate;
+            }
+        }
+
+        // Validate the registration date range after merging
+        // the incoming values with the existing event.
+        const updatedStartDate =
+            body.registrationStartDate ??
+            event.registrationStartDate;
+
+        const updatedEndDate =
+            body.registrationEndDate ??
+            event.registrationEndDate;
+
+        if (updatedStartDate >= updatedEndDate) {
+            return res.status(400).json({
+                success: false,
+                message: "Registration end date must be after registration start date."
+            });
+        }
 
         if (body.imageUrl !== undefined) {
             if (body.imageUrl && !/^data:image\/(jpeg|jpg|png|webp);base64,/.test(body.imageUrl)) {

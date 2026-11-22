@@ -12,18 +12,43 @@ const generateRegistrationId =
 // CHECK WHETHER REGISTRATION IS OPEN
 // =====================================================
 
+
+
 const isRegistrationOpen = (event) => {
+    if (!event) return false;
 
-    const now = new Date();
+    const now = Date.now();
 
-    return (
-        ["Published", "Registration Open"].includes(
+    const startDate = new Date(
+        event.registrationStartDate
+    ).getTime();
+
+    const endDate = new Date(
+        event.registrationEndDate
+    ).getTime();
+
+    // Invalid or missing registration dates
+    if (
+        !Number.isFinite(startDate) ||
+        !Number.isFinite(endDate)
+    ) {
+        return false;
+    }
+
+    // Registration must be enabled by admin
+    if (
+        !["Published", "Registration Open"].includes(
             event.status
-        ) &&
-        now >= new Date(event.registrationStartDate) &&
-        now < new Date(event.registrationEndDate)
-    );
+        )
+    ) {
+        return false;
+    }
 
+    // Current time must be within the registration window
+    return (
+        now >= startDate &&
+        now < endDate
+    );
 };
 
 
@@ -141,14 +166,34 @@ exports.createRegistration = async (
         // -------------------------------------------------
 
         if (!isRegistrationOpen(event)) {
+            const now = new Date();
+
+            const startDate = new Date(
+                event.registrationStartDate
+            );
+
+            const endDate = new Date(
+                event.registrationEndDate
+            );
+
+            let message = "Registration is not currently open.";
+
+            if (
+                !["Published", "Registration Open"].includes(
+                    event.status
+                )
+            ) {
+                message = `Registration is disabled. Current event status: ${event.status}.`;
+            } else if (now < startDate) {
+                message = `Registration will open on ${startDate.toLocaleString("en-IN")}.`;
+            } else if (now >= endDate) {
+                message = "The registration deadline has passed.";
+            }
 
             return res.status(400).json({
-
-                message:
-                    "Registration is not currently open."
-
+                success: false,
+                message
             });
-
         }
 
 

@@ -3,6 +3,17 @@ import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import "./AddEvent.css";
 
+// Convert browser local date/time into an explicit ISO timestamp.
+const toApiDateTime = (value) => {
+    if (!value) return value;
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+        ? value
+        : date.toISOString();
+};
+
 const initialForm = {
     name: "",
     description: "",
@@ -166,22 +177,21 @@ export default function AddEvent() {
 
             const response = await api.post("/events", {
                 name: form.name.trim(),
-
                 description: form.description.trim(),
-
-                // IMPORTANT:
-                // Category is now entered manually.
                 category: form.category.trim(),
 
-                date: form.date,
+                // Convert browser local time to UTC ISO timestamp
+                date: toApiDateTime(form.date),
 
                 location: form.location.trim(),
 
-                registrationStartDate:
-                    form.registrationStartDate,
+                registrationStartDate: toApiDateTime(
+                    form.registrationStartDate
+                ),
 
-                registrationEndDate:
-                    form.registrationEndDate,
+                registrationEndDate: toApiDateTime(
+                    form.registrationEndDate
+                ),
 
                 participationType: {
                     individual: form.individual,
@@ -190,18 +200,15 @@ export default function AddEvent() {
 
                 teamSettings: {
                     enabled: form.team,
-
                     minMembers: form.team
                         ? Number(form.minMembers)
                         : 2,
-
                     maxMembers: form.team
                         ? Number(form.maxMembers)
                         : 5
                 },
 
                 status: form.status,
-
                 fee: Number(form.fee) || 0,
                 imageUrl
             });
@@ -260,365 +267,365 @@ export default function AddEvent() {
                 <header className="add-form-heading"><div className="add-form-heading-copy"><span className="add-event-eyebrow">LET’S GET IT ON THE CALENDAR</span><h1>Add your event</h1><p>Start with the essentials. You can update these details anytime.</p></div><div className="add-form-heading-art" aria-hidden="true"><span>✳</span><i></i><small>CAMPUSLY EVENTS</small></div></header>
 
                 <div className="add-event-fields">
-                {/* ==================================
+                    {/* ==================================
             ERROR MESSAGE
         ================================== */}
 
-                {error && (
-                    <div className="alert error">
-                        {error}
-                    </div>
-                )}
+                    {error && (
+                        <div className="alert error">
+                            {error}
+                        </div>
+                    )}
 
-                {/* ==================================
+                    {/* ==================================
             SUCCESS MESSAGE
         ================================== */}
 
-                {success && (
-                    <div className="alert success">
-                        {success}
-                    </div>
-                )}
+                    {success && (
+                        <div className="alert success">
+                            {success}
+                        </div>
+                    )}
 
-                {/* ==================================
+                    {/* ==================================
             EVENT NAME
         ================================== */}
 
-                <label>
-                    Event Name
+                    <label>
+                        Event Name
 
-                    <input
-                        type="text"
-                        required
-                        placeholder="Enter event name"
-                        value={form.name}
-                        onChange={(e) =>
-                            update(
-                                "name",
-                                e.target.value
-                            )
-                        }
-                    />
-                </label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="Enter event name"
+                            value={form.name}
+                            onChange={(e) =>
+                                update(
+                                    "name",
+                                    e.target.value
+                                )
+                            }
+                        />
+                    </label>
 
-                {/* ==================================
+                    {/* ==================================
             DESCRIPTION
         ================================== */}
 
-                <label>
-                    Event Description
+                    <label>
+                        Event Description
 
-                    <textarea
-                        required
-                        placeholder="Enter event description"
-                        value={form.description}
-                        onChange={(e) =>
-                            update(
-                                "description",
-                                e.target.value
-                            )
-                        }
-                    />
-                </label>
+                        <textarea
+                            required
+                            placeholder="Enter event description"
+                            value={form.description}
+                            onChange={(e) =>
+                                update(
+                                    "description",
+                                    e.target.value
+                                )
+                            }
+                        />
+                    </label>
 
-                <div className="form-group event-image-field">
-                    <label htmlFor="event-image">Event Poster / Image (optional)</label>
-                    <input id="event-image" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} />
-                    <small className="hint">JPG, PNG or WebP · maximum 2 MB.</small>
-                    {imageError && <div className="alert error">{imageError}</div>}
-                    {imageUrl && <div className="event-image-preview-wrap"><img className="event-image-preview" src={imageUrl} alt="Event poster preview" /><button type="button" className="button secondary" onClick={() => { setImageUrl(""); const input = document.getElementById("event-image"); if (input) input.value = ""; }}>Remove image</button></div>}
-                </div>
+                    <div className="form-group event-image-field">
+                        <label htmlFor="event-image">Event Poster / Image (optional)</label>
+                        <input id="event-image" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} />
+                        <small className="hint">JPG, PNG or WebP · maximum 2 MB.</small>
+                        {imageError && <div className="alert error">{imageError}</div>}
+                        {imageUrl && <div className="event-image-preview-wrap"><img className="event-image-preview" src={imageUrl} alt="Event poster preview" /><button type="button" className="button secondary" onClick={() => { setImageUrl(""); const input = document.getElementById("event-image"); if (input) input.value = ""; }}>Remove image</button></div>}
+                    </div>
 
-                {/* ==================================
+                    {/* ==================================
             CATEGORY
         ================================== */}
 
-                <label>
-                    Event Category
+                    <label>
+                        Event Category
 
-                    <input
-                        type="text"
-                        name="category"
-                        placeholder="Example: Technical, Cultural, Sports, Hackathon, Robotics, Gaming"
-                        value={form.category}
-                        onChange={(e) =>
-                            setForm({
-                                ...form,
-                                category: e.target.value
-                            })
-                        }
-                        required
-                    />
+                        <input
+                            type="text"
+                            name="category"
+                            placeholder="Example: Technical, Cultural, Sports, Hackathon, Robotics, Gaming"
+                            value={form.category}
+                            onChange={(e) =>
+                                setForm({
+                                    ...form,
+                                    category: e.target.value
+                                })
+                            }
+                            required
+                        />
 
-                    <small className="category-input-help">
-                        Enter your own category. If it does not already
-                        exist, it will automatically be added to the
-                        Categories section and MongoDB.
-                    </small>
-                </label>
+                        <small className="category-input-help">
+                            Enter your own category. If it does not already
+                            exist, it will automatically be added to the
+                            Categories section and MongoDB.
+                        </small>
+                    </label>
 
-                {/* ==================================
+                    {/* ==================================
             EVENT DATE
         ================================== */}
 
-                <label>
-                    Event Date
+                    <label>
+                        Event Date
 
-                    <input
-                        type="datetime-local"
-                        required
-                        value={form.date}
-                        onChange={(e) =>
-                            update(
-                                "date",
-                                e.target.value
-                            )
-                        }
-                    />
-                </label>
+                        <input
+                            type="datetime-local"
+                            required
+                            value={form.date}
+                            onChange={(e) =>
+                                update(
+                                    "date",
+                                    e.target.value
+                                )
+                            }
+                        />
+                    </label>
 
-                {/* ==================================
+                    {/* ==================================
             LOCATION
         ================================== */}
 
-                <label>
-                    Event Location
+                    <label>
+                        Event Location
 
-                    <input
-                        type="text"
-                        required
-                        placeholder="Enter event location"
-                        value={form.location}
-                        onChange={(e) =>
-                            update(
-                                "location",
-                                e.target.value
-                            )
-                        }
-                    />
-                </label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="Enter event location"
+                            value={form.location}
+                            onChange={(e) =>
+                                update(
+                                    "location",
+                                    e.target.value
+                                )
+                            }
+                        />
+                    </label>
 
-                {/* ==================================
+                    {/* ==================================
             REGISTRATION START
         ================================== */}
 
-                <label>
-                    Registration Start Date
+                    <label>
+                        Registration Start Date
 
-                    <input
-                        type="datetime-local"
-                        required
-                        value={
-                            form.registrationStartDate
-                        }
-                        onChange={(e) =>
-                            update(
-                                "registrationStartDate",
-                                e.target.value
-                            )
-                        }
-                    />
-                </label>
+                        <input
+                            type="datetime-local"
+                            required
+                            value={
+                                form.registrationStartDate
+                            }
+                            onChange={(e) =>
+                                update(
+                                    "registrationStartDate",
+                                    e.target.value
+                                )
+                            }
+                        />
+                    </label>
 
-                {/* ==================================
+                    {/* ==================================
             REGISTRATION END
         ================================== */}
 
-                <label>
-                    Registration End Date
+                    <label>
+                        Registration End Date
 
-                    <input
-                        type="datetime-local"
-                        required
-                        value={
-                            form.registrationEndDate
-                        }
-                        onChange={(e) =>
-                            update(
-                                "registrationEndDate",
-                                e.target.value
-                            )
-                        }
-                    />
-                </label>
+                        <input
+                            type="datetime-local"
+                            required
+                            value={
+                                form.registrationEndDate
+                            }
+                            onChange={(e) =>
+                                update(
+                                    "registrationEndDate",
+                                    e.target.value
+                                )
+                            }
+                        />
+                    </label>
 
-                {/* ==================================
+                    {/* ==================================
             PARTICIPATION TYPE
         ================================== */}
 
-                <div className="form-group">
-
-                    <label>
-                        Participation Type
-                    </label>
-
-                    <div className="radio-row">
+                    <div className="form-group">
 
                         <label>
-                            <input
-                                type="checkbox"
-                                checked={form.individual}
-                                onChange={(e) =>
-                                    update(
-                                        "individual",
-                                        e.target.checked
-                                    )
-                                }
-                            />
-
-                            Individual
+                            Participation Type
                         </label>
 
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={form.team}
-                                onChange={(e) =>
-                                    update(
-                                        "team",
-                                        e.target.checked
-                                    )
-                                }
-                            />
+                        <div className="radio-row">
 
-                            Team
-                        </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={form.individual}
+                                    onChange={(e) =>
+                                        update(
+                                            "individual",
+                                            e.target.checked
+                                        )
+                                    }
+                                />
+
+                                Individual
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={form.team}
+                                    onChange={(e) =>
+                                        update(
+                                            "team",
+                                            e.target.checked
+                                        )
+                                    }
+                                />
+
+                                Team
+                            </label>
+
+                        </div>
 
                     </div>
 
-                </div>
-
-                {/* ==================================
+                    {/* ==================================
             TEAM SETTINGS
         ================================== */}
 
-                {form.team && (
-                    <div className="team-settings">
+                    {form.team && (
+                        <div className="team-settings">
 
-                        <h2>
-                            Team Settings
-                        </h2>
+                            <h2>
+                                Team Settings
+                            </h2>
 
-                        <label>
-                            Minimum Team Members
+                            <label>
+                                Minimum Team Members
 
-                            <input
-                                type="number"
-                                min="2"
-                                value={form.minMembers}
-                                onChange={(e) =>
-                                    update(
-                                        "minMembers",
-                                        e.target.value
-                                    )
-                                }
-                            />
-                        </label>
+                                <input
+                                    type="number"
+                                    min="2"
+                                    value={form.minMembers}
+                                    onChange={(e) =>
+                                        update(
+                                            "minMembers",
+                                            e.target.value
+                                        )
+                                    }
+                                />
+                            </label>
 
-                        <label>
-                            Maximum Team Members
+                            <label>
+                                Maximum Team Members
 
-                            <input
-                                type="number"
-                                min="2"
-                                value={form.maxMembers}
-                                onChange={(e) =>
-                                    update(
-                                        "maxMembers",
-                                        e.target.value
-                                    )
-                                }
-                            />
-                        </label>
+                                <input
+                                    type="number"
+                                    min="2"
+                                    value={form.maxMembers}
+                                    onChange={(e) =>
+                                        update(
+                                            "maxMembers",
+                                            e.target.value
+                                        )
+                                    }
+                                />
+                            </label>
 
-                    </div>
-                )}
+                        </div>
+                    )}
 
-                {/* ==================================
+                    {/* ==================================
             EVENT STATUS
         ================================== */}
 
-                <label>
-                    Event Status
+                    <label>
+                        Event Status
 
-                    <select
-                        value={form.status}
-                        onChange={(e) =>
-                            update(
-                                "status",
-                                e.target.value
-                            )
-                        }
-                    >
+                        <select
+                            value={form.status}
+                            onChange={(e) =>
+                                update(
+                                    "status",
+                                    e.target.value
+                                )
+                            }
+                        >
 
-                        <option value="Draft">
-                            Draft
-                        </option>
+                            <option value="Draft">
+                                Draft
+                            </option>
 
-                        <option value="Published">
-                            Published
-                        </option>
+                            <option value="Published">
+                                Published
+                            </option>
 
-                        <option value="Registration Open">
-                            Registration Open
-                        </option>
+                            <option value="Registration Open">
+                                Registration Open
+                            </option>
 
-                        <option value="Registration Closed">
-                            Registration Closed
-                        </option>
+                            <option value="Registration Closed">
+                                Registration Closed
+                            </option>
 
-                        <option value="Completed">
-                            Completed
-                        </option>
+                            <option value="Completed">
+                                Completed
+                            </option>
 
-                        <option value="Cancelled">
-                            Cancelled
-                        </option>
+                            <option value="Cancelled">
+                                Cancelled
+                            </option>
 
-                    </select>
-                </label>
+                        </select>
+                    </label>
 
-                {/* ==================================
+                    {/* ==================================
             EVENT FEE
         ================================== */}
 
-                <label>
-                    Event Fee (₹)
+                    <label>
+                        Event Fee (₹)
 
-                    <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        placeholder="0"
-                        value={form.fee}
-                        onChange={(e) =>
-                            update(
-                                "fee",
-                                e.target.value
-                            )
-                        }
-                    />
+                        <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="0"
+                            value={form.fee}
+                            onChange={(e) =>
+                                update(
+                                    "fee",
+                                    e.target.value
+                                )
+                            }
+                        />
 
-                    <small className="hint">
-                        Enter 0 for a free event.
-                    </small>
-                </label>
+                        <small className="hint">
+                            Enter 0 for a free event.
+                        </small>
+                    </label>
 
-                {/* ==================================
+                    {/* ==================================
             SUBMIT
         ================================== */}
 
-                <button
-                    type="submit"
-                    className="button primary"
-                    disabled={submitting}
-                >
+                    <button
+                        type="submit"
+                        className="button primary"
+                        disabled={submitting}
+                    >
 
-                    {submitting
-                        ? "Creating Event..."
-                        : "Create Event"}
+                        {submitting
+                            ? "Creating Event..."
+                            : "Create Event"}
 
-                </button>
+                    </button>
 
                 </div>
 
