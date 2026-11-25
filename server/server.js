@@ -22,7 +22,7 @@ const app = express();
 
 const allowedOrigins = [
     "http://localhost:5173",
-    "https://college-event-management-system-lyart.vercel.app"
+    "https://campusly-yash-1624s-projects.vercel.app"
 ];
 
 const corsOptions = {
@@ -34,7 +34,7 @@ const corsOptions = {
         if (
             !origin ||
             allowedOrigins.includes(origin) ||
-            /^https:\/\/college-event-management-system-[a-z0-9-]+-yash-1624s-projects\.vercel\.app$/.test(origin)
+            /^https:\/\/campusly-yash-1624s-projects\.vercel\.app$/.test(origin)
         ) {
             return callback(null, true);
         }
